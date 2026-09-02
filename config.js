@@ -15,7 +15,7 @@ window.LUKELESS_CONFIG = {
   // notice below — which is also the only way to actually interrupt a match
   // already in progress, short of running a server that could.
   maintenance: false,
-  maintenanceNotice: "Tuned the song weighting and added artist search. Back shortly.",
+  maintenanceNotice: "lukeless is down for a quick update. Back in a few minutes.",
 
   // Extra ICE servers. Roughly 10-20% of network pairs — symmetric NAT on both
   // ends, mostly — cannot reach each other without a TURN relay.

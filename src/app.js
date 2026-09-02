@@ -970,36 +970,58 @@ function toast(msg) {
 
 const MAINT_POLL_MS = 10000;
 
-function showMaintenance() {
+/* GitHub Pages serves config.js with its own Cache-Control (max-age=600),
+   which serve.json cannot touch — that file only reaches the local `npx
+   serve` preview, not the real deploy. The plain <script src="config.js">
+   tag in index.html is therefore a normal cached request: if a browser
+   fetched it while the flag briefly read true, every load of the page for
+   up to ten minutes afterward — including a reload triggered *by this very
+   poll* — re-serves that same stale answer. Left as it was, that turns "back
+   up" into what looks like an infinite loop: the poll correctly notices the
+   server has flipped back, reloads, and the reload immediately re-reads the
+   cached true anyway.
+ *
+ * The fix is that the maintenance decision itself must never trust the
+   cached global — window.LUKELESS_CONFIG is fine for ICE/peerServer settings,
+   which are not safety-critical and rarely change, but both the boot check
+   and the poll's baseline are read fresh here, the same no-store fetch
+   either way, so there is exactly one source of truth and it is never the
+   one thing the browser is allowed to cache. */
+async function readMaintenance() {
+  try {
+    const text = await fetch('config.js?t=' + Date.now(), { cache: 'no-store' }).then((r) => r.text());
+    const on = /maintenance:\s*true/.test(text);
+    const m = text.match(/maintenanceNotice:\s*(?:'((?:[^'\\]|\\.)*)'|"((?:[^"\\]|\\.)*)")/);
+    const notice = m ? (m[1] ?? m[2]).replace(/\\(.)/g, '$1') : null;
+    return { on, notice };
+  } catch {
+    // Offline for a moment. Falling back to the cached global is still
+    // better than blocking the whole boot on a single failed fetch.
+    return { on: !!window.LUKELESS_CONFIG?.maintenance, notice: window.LUKELESS_CONFIG?.maintenanceNotice };
+  }
+}
+
+function showMaintenance(notice) {
   stopClip();
   match?.link?.close();
   el.maintOverlay.hidden = false;
-  el.maintNotice.textContent = window.LUKELESS_CONFIG?.maintenanceNotice
-    || 'lukeless is down for a quick update. Back in a few minutes.';
+  el.maintNotice.textContent = notice || 'lukeless is down for a quick update. Back in a few minutes.';
 }
 
-/* Polls config.js itself rather than some separate status endpoint, so
-   there is exactly one file to edit to take the site up or down. Compared
-   once against whatever was true when *this* page instance loaded — on a
-   mismatch it reloads, and the boot check below decides what that reload
-   shows. no-store, since serve.json already asks for that locally and a
-   stale cached copy defeats the entire point on a real deploy. */
-function pollMaintenance() {
-  const was = !!window.LUKELESS_CONFIG?.maintenance;
+function pollMaintenance(was) {
   setInterval(async () => {
-    try {
-      const text = await fetch('config.js?t=' + Date.now(), { cache: 'no-store' }).then((r) => r.text());
-      if (/maintenance:\s*true/.test(text) !== was) location.reload();
-    } catch { /* offline for a moment — next tick will catch it */ }
+    const { on } = await readMaintenance();
+    if (on !== was) location.reload();
   }, MAINT_POLL_MS);
 }
 
 // ── boot ───────────────────────────────────────────────────────────────────
 
-pollMaintenance();
+const maint = await readMaintenance();
+pollMaintenance(maint.on);
 
-if (window.LUKELESS_CONFIG?.maintenance) {
-  showMaintenance();
+if (maint.on) {
+  showMaintenance(maint.notice);
 } else {
   el.vsName.value = LS.get('name', '');
   syncPacks();
