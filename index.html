@@ -32,11 +32,20 @@
   <div class="card vs-lobby" id="lobby">
     <h2 id="lobbyTitle">Play someone</h2>
     <p id="lobbyText">One of you opens a match and reads out the code. Six songs, same
-      six for both of you, fastest correct guess takes the round.</p>
+      six for both of you, fastest correct guess takes the round. Whichever difficulty
+      the host has picked below is what the whole match plays at.</p>
 
     <div class="field">
       <label for="vsName">Your name</label>
       <input type="text" id="vsName" maxlength="16" placeholder="Player 2" autocomplete="off">
+    </div>
+
+    <div class="field">
+      <label>Difficulty</label>
+      <div class="pills" id="vsDifficulty" style="margin:0">
+        <button class="pill" id="vsNormalBtn" aria-pressed="true">Normal</button>
+        <button class="pill" id="vsInsaneBtn" aria-pressed="false">Insane</button>
+      </div>
     </div>
 
     <div id="lobbyPick">
@@ -162,7 +171,9 @@
   <p><b>Insane</b>: clips start at a tenth of a second — <b>0.1s → 0.5s → 0.7s → 1s → 1.5s</b>,
      five tries instead of six, worth more per try (<b>200 / 150 / 110 / 80 / 50</b>).
      No autocomplete — you type the title yourself, exactly, with nothing suggested.
-     It also leans hard on lofi cuts where the catalogue has them.</p>
+     It also leans hard on lofi cuts where the catalogue has them. 1v1 has its own
+     Normal/Insane toggle in the lobby — whichever the host picks before opening the
+     match is what both of you play, and it can't be changed once a round is live.</p>
   <p>Clips come from Apple's previews, so they usually start at the hook rather than
      the first note. Consider it a feature.</p>
   <p>1v1 runs directly between the two browsers, with no server keeping score. That

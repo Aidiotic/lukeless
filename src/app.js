@@ -388,6 +388,11 @@ function rebuildTitles() {
   }));
 }
 
+/* True for solo Insane, and equally true for an Insane 1v1 match — `mode`
+   stays 'versus' for the whole match, so the no-suggestions rule has to
+   check the match's own difficulty rather than the mode alone. */
+const insaneRules = () => mode === 'insane' || (mode === 'versus' && !!match?.insane);
+
 function updateAC() {
   const q = norm(el.guess.value);
   chosen = null; el.submitBtn.disabled = true; acList = [];
@@ -395,7 +400,7 @@ function updateAC() {
 
   const guessed = new Set(S.rows.filter((r) => r.kind !== 'skip').map((r) => norm(r.text)));
 
-  if (mode === 'insane') {
+  if (insaneRules()) {
     // No dropdown, ever — the only way in is typing the title closely enough
     // to match exactly (case, punctuation and spacing aside). acList stays
     // empty so a stray ArrowUp/Down or Enter from the shared keydown handler
@@ -587,6 +592,16 @@ function fullReport() {
 
 const myName = () => (el.vsName.value.trim() || 'You').slice(0, 16);
 
+/* The host's choice at the moment a match actually starts (read in the
+   'hello' handler) is what's authoritative — a guest's own toggle is purely
+   cosmetic until 'setup' overwrites match.insane with the host's. */
+let vsInsane = LS.get('vsInsane', false);
+
+function syncDifficulty() {
+  el.vsNormalBtn.setAttribute('aria-pressed', String(!vsInsane));
+  el.vsInsaneBtn.setAttribute('aria-pressed', String(vsInsane));
+}
+
 function newMatch(isHost, code) {
   return {
     link: null, isHost, code,
@@ -597,14 +612,31 @@ function newMatch(isHost, code) {
     phase: 'lobby',
     readyMe: false, readyThem: false,
     sentDone: false,
+    insane: false,                  // authoritative once 'setup' is sent (host) or received (guest)
   };
 }
 
 /* Host picks the songs. Sampling without replacement, so a match never asks
-   the same song twice. */
-function drawSongs() {
-  const list = pool();
-  return weightedOrder(list, Math.random).slice(0, Math.min(VS_ROUNDS, list.length));
+   the same song twice. Insane draws lean lofi the same way pickInsaneSong
+   does for solo play, just without replacement across all six rounds. */
+function drawSongs(insane) {
+  const list = pool(), n = Math.min(VS_ROUNDS, list.length);
+  if (!insane) return weightedOrder(list, Math.random).slice(0, n);
+
+  const used = new Set(), out = [];
+  while (out.length < n) {
+    let idx = null;
+    if (Math.random() < LOFI_CHANCE) {
+      const lofi = list.filter((i) => LOFI_RE.test(SONGS[i].title) && !used.has(i));
+      if (lofi.length) idx = lofi[Math.floor(Math.random() * lofi.length)];
+    }
+    if (idx === null) {
+      idx = weightedOrder(list, Math.random).find((i) => !used.has(i));
+    }
+    if (idx === undefined || idx === null) break; // pool exhausted
+    used.add(idx); out.push(idx);
+  }
+  return out;
 }
 
 function connLine(text, bad) {
@@ -668,8 +700,9 @@ function onVersusMessage(msg) {
       }
       // The host owns the setup, and answers the greeting with it.
       if (match.isHost) {
-        match.songs = drawSongs();
-        match.link.send({ t: 'setup', songs: match.songs, pack: packId, rounds: match.songs.length });
+        match.insane = vsInsane;
+        match.songs = drawSongs(match.insane);
+        match.link.send({ t: 'setup', songs: match.songs, pack: packId, insane: match.insane, rounds: match.songs.length });
         startVersusRound(0);
         match.link.send({ t: 'start', round: 0 });
       }
@@ -677,8 +710,9 @@ function onVersusMessage(msg) {
     }
 
     case 'setup': {
-      // The guest plays the host's pack, whatever it had selected.
+      // The guest plays the host's pack and difficulty, whatever it had picked.
       if (msg.pack && ALL_PACKS.some((p) => p.id === msg.pack)) { packId = msg.pack; syncPacks(); }
+      match.insane = !!msg.insane;
       match.songs = msg.songs ?? [];
       break;
     }
@@ -733,9 +767,11 @@ function startVersusRound(n) {
   el.game.hidden = false;
   el.scoreboard.hidden = false;
   el.roundBar.hidden = false;
-  el.roundLabel.textContent = 'Round ' + (n + 1) + ' of ' + match.songs.length;
+  el.roundLabel.textContent = 'Round ' + (n + 1) + ' of ' + match.songs.length + (match.insane ? ' · Insane' : '');
+  el.guess.placeholder = match.insane
+    ? 'Type the exact title — no suggestions…' : 'Search by title or artist…';
 
-  beginRound(match.songs[n]);
+  beginRound(match.songs[n], null, match.insane ? INSANE_CFG : NORMAL_CFG);
   drawScoreboard();
   startClock();
   el.guess.focus();
@@ -964,7 +1000,7 @@ el.guess.addEventListener('keydown', (e) => {
   // Arrow-key navigation only means anything when a dropdown is showing —
   // in Insane there never is one, and markSel() disabling submit based on an
   // always-empty acList would otherwise silently kill a valid typed match.
-  if (mode === 'insane') { if (e.key === 'Enter') { e.preventDefault(); submit(); } return; }
+  if (insaneRules()) { if (e.key === 'Enter') { e.preventDefault(); submit(); } return; }
   if (e.key === 'ArrowDown') { e.preventDefault(); acSel = Math.min(acSel + 1, acList.length - 1); markSel(); }
   else if (e.key === 'ArrowUp') { e.preventDefault(); acSel = Math.max(acSel - 1, 0); markSel(); }
   else if (e.key === 'Enter') {
@@ -1023,6 +1059,17 @@ el.joinCode.addEventListener('input', () => {
 el.joinCode.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !el.joinBtn.disabled) joinMatch(); });
 el.cancelBtn.addEventListener('click', () => endMatch());
 el.vsName.addEventListener('input', () => { LS.set('name', el.vsName.value); drawScoreboard(); });
+
+function setDifficulty(insane) {
+  // Same rule as the pack pills: free to change before a match exists or
+  // while still waiting in the lobby, locked the moment a round is live.
+  if (match && match.phase !== 'lobby') return;
+  vsInsane = insane;
+  LS.set('vsInsane', vsInsane);
+  syncDifficulty();
+}
+el.vsNormalBtn.addEventListener('click', () => setDifficulty(false));
+el.vsInsaneBtn.addEventListener('click', () => setDifficulty(true));
 
 el.copyLinkBtn.addEventListener('click', () => {
   const url = location.origin + location.pathname + '?vs=' + match.code;
@@ -1117,6 +1164,7 @@ if (maint.on) {
 } else {
   el.vsName.value = LS.get('name', '');
   syncPacks();
+  syncDifficulty();
   applyVolume();
   drawStats();
 
