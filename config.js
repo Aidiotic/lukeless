@@ -14,8 +14,8 @@ window.LUKELESS_CONFIG = {
   // every open tab notices within about ten seconds and reloads onto the
   // notice below — which is also the only way to actually interrupt a match
   // already in progress, short of running a server that could.
-  maintenance: false,
-  maintenanceNotice: "lukeless is down for a quick update. Back in a few minutes.",
+  maintenance: true,
+  maintenanceNotice: "Updated the song weighting and fixed a 1v1 bug. Back shortly.",
 
   // Extra ICE servers. Roughly 10-20% of network pairs — symmetric NAT on both
   // ends, mostly — cannot reach each other without a TURN relay.
