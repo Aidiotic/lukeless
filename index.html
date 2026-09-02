@@ -111,7 +111,7 @@
         <input type="text" id="guess" placeholder="Search the playlist…" autocomplete="off"
                autocorrect="off" autocapitalize="off" spellcheck="false">
       </div>
-      <div class="hintbar">
+      <div class="hintbar" id="hintbar">
         <button class="hint-btn" id="hintBtn">Reveal first word</button>
         <div class="hint-word" id="hintWord" hidden></div>
       </div>
@@ -152,7 +152,8 @@
     <li>Clip lengths: <b>1s → 2s → 4s → 7s → 11s → 16s</b></li>
     <li>Six tries. A wrong guess or a skip unlocks the next length.</li>
     <li>Solving faster scores more: <b>100 / 80 / 60 / 45 / 30 / 20</b> points.</li>
-    <li><b>Reveal first word</b> costs 25 points and tags the win with <span class="cheat">*</span>.</li>
+    <li><b>Reveal first word</b> costs 25 points and tags the win with <span class="cheat">*</span>.
+        Solo only — it is not offered in 1v1.</li>
   </ol>
   <p><b>Daily</b> gives everyone the same song, changing at midnight. <b>Endless</b> is
      random, forever. <b>1v1</b> puts you against a friend over six songs — you both

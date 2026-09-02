@@ -213,6 +213,7 @@ function render() {
     ? 'Give up' : 'Skip (+' + (STEPS[stage() + 1] - lim) + 's)';
 
   showHint();
+  el.hintbar.hidden = mode === 'versus';
   el.nextBtn.style.display = mode === 'daily' || mode === 'versus' ? 'none' : '';
   el.shareBtn.style.display = mode === 'versus' ? 'none' : '';
   el.reportRow.style.display = mode === 'versus' ? 'none' : '';
@@ -232,7 +233,9 @@ function showHint() {
 }
 
 function revealHint() {
-  if (!S || S.done || S.hint) return;
+  // Not offered in 1v1: the two of you are racing the same clip, and a button
+  // that trades points for the answer only muddies who actually knew it.
+  if (mode === 'versus' || !S || S.done || S.hint) return;
   S.hint = true;
   showHint();
   saveDaily();
