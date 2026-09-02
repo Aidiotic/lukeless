@@ -369,7 +369,7 @@ function renderDecoys() {
   el.decoys.hidden = !show;
   if (!show) { el.decoys.innerHTML = ''; return; }
   const guessed = new Set(S.rows.filter((r) => r.kind === 'wrong').map((r) => norm(r.text)));
-  el.decoys.innerHTML = '<div class="decoys-label">5 decoys — the real title is not shown</div><div class="decoy-list">' +
+  el.decoys.innerHTML = '<div class="decoys-label">5 decoys</div><div class="decoy-list">' +
     S.decoys.map((i) => '<button class="decoy" data-decoy="' + i + '"' +
       (guessed.has(norm(SONGS[i].title)) ? ' disabled' : '') + '>' + escapeHtml(SONGS[i].title) + '</button>').join('') +
     '</div>';
@@ -429,22 +429,16 @@ function updateAC() {
 
   const guessed = new Set(S.rows.filter((r) => r.kind !== 'skip').map((r) => norm(r.text)));
 
-  if (insaneRules()) {
-    // No dropdown, ever — the only way in is typing the title closely enough
-    // to match exactly (case, punctuation and spacing aside). acList stays
-    // empty so a stray ArrowUp/Down or Enter from the shared keydown handler
-    // has nothing to act on.
-    el.ac.classList.remove('show');
-    const answerKey = norm(SONGS[S.idx].title);
-    const t = q === answerKey
-      ? titles.find((x) => x.i === S.idx)
-      : titles.find((x) => x.key === q && !guessed.has(x.key));
-    if (t) { chosen = t; el.submitBtn.disabled = false; }
-    return;
-  }
-
   acList = titles.filter((t) => t.searchKey.includes(q) && !guessed.has(t.key))
-    .sort((a, b) => a.searchKey.indexOf(q) - b.searchKey.indexOf(q) || a.key.localeCompare(b.key))
+    .sort((a, b) => {
+      // If Insane's exact answer shares its title with another catalogue row,
+      // keep the real song first so typing the right title cannot score wrong.
+      if (insaneRules() && q === norm(SONGS[S.idx].title)) {
+        if (a.i === S.idx) return -1;
+        if (b.i === S.idx) return 1;
+      }
+      return a.searchKey.indexOf(q) - b.searchKey.indexOf(q) || a.key.localeCompare(b.key);
+    })
     .slice(0, 40);
 
   if (!acList.length) { el.ac.classList.remove('show'); return; }
@@ -810,8 +804,7 @@ function startVersusRound(n) {
   el.scoreboard.hidden = false;
   el.roundBar.hidden = false;
   el.roundLabel.textContent = 'Round ' + (n + 1) + ' of ' + match.songs.length + (match.insane ? ' · Insane' : '');
-  el.guess.placeholder = match.insane
-    ? 'Type the exact title — no suggestions…' : 'Search by title or artist…';
+  el.guess.placeholder = 'Search by title or artist…';
 
   beginRound(match.songs[n], null, match.insane ? INSANE_CFG : NORMAL_CFG, match.decoys[n]);
   drawScoreboard();
@@ -1005,8 +998,7 @@ function setMode(next) {
   el.game.hidden = false;
   el.scoreboard.hidden = true;
   el.roundBar.hidden = true;
-  el.guess.placeholder = mode === 'insane'
-    ? 'Type the exact title — no suggestions…' : 'Search by title or artist…';
+  el.guess.placeholder = 'Search by title or artist…';
 
   if (mode === 'daily') {
     const saved = LS.get('daily', null);
@@ -1039,10 +1031,6 @@ el.guess.addEventListener('input', updateAC);
 el.guess.addEventListener('focus', () => { if (el.guess.value) updateAC(); });
 
 el.guess.addEventListener('keydown', (e) => {
-  // Arrow-key navigation only means anything when a dropdown is showing —
-  // in Insane there never is one, and markSel() disabling submit based on an
-  // always-empty acList would otherwise silently kill a valid typed match.
-  if (insaneRules()) { if (e.key === 'Enter') { e.preventDefault(); submit(); } return; }
   if (e.key === 'ArrowDown') { e.preventDefault(); acSel = Math.min(acSel + 1, acList.length - 1); markSel(); }
   else if (e.key === 'ArrowUp') { e.preventDefault(); acSel = Math.max(acSel - 1, 0); markSel(); }
   else if (e.key === 'Enter') {

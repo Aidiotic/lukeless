@@ -52,7 +52,7 @@ wait_for_publish() {
 # than trusting the build status alone a second time today.
 verify_live() {
   local expected="$1"
-  echo "  confirming the live site actually shows maintenance: $expected…"
+  echo "  confirming the live site actually shows maintenance: ${expected}…"
   for _ in $(seq 1 12); do
     live=$(curl -s "$SITE/config.js?t=$(date +%s%N)" | grep -oE 'maintenance:\s*(true|false)' | grep -oE '(true|false)' | head -1)
     if [ "$live" = "$expected" ]; then echo "  confirmed live."; return 0; fi
