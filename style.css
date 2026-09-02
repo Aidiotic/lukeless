@@ -336,3 +336,12 @@ footer a { color: var(--clay-strong); }
   font-size: 13px; opacity: 0; pointer-events: none; transition: .3s var(--ease); z-index: 99;
 }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+/* Sits over everything, opaque, rather than living alongside the game markup
+   with visibility toggled — nothing under it should be reachable, clickable,
+   or audible while it's up. */
+.maint-overlay {
+  position: fixed; inset: 0; z-index: 999;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--paper); padding: 24px;
+}

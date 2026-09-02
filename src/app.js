@@ -941,23 +941,66 @@ function toast(msg) {
   setTimeout(() => el.toast.classList.remove('show'), 2200);
 }
 
-// ── boot ───────────────────────────────────────────────────────────────────
+// ── maintenance ──────────────────────────────────────────────────────────
+//
+// There is no server here to restart — this is static pages, and a 1v1 match
+// is two browsers talking directly to each other with nothing of ours in the
+// loop. This flag stands in for one: flip it in config.js and push (or run
+// ./restart.sh, which does both halves of that including waiting for GitHub
+// Pages to actually publish each one) and every open tab — mid-match or
+// just sitting on the menu — notices within one poll and reloads onto the
+// notice below. That reload is also the only way to interrupt a match
+// already running, since nothing server-side could reach into it either.
 
-el.vsName.value = LS.get('name', '');
-syncPacks();
-applyVolume();
-drawStats();
+const MAINT_POLL_MS = 10000;
 
-/* ?vs=CODE is an invite. Land straight in the 1v1 tab with the code filled in
-   rather than making someone type what they just clicked. */
-const invite = normaliseCode(new URLSearchParams(location.search).get('vs') ?? '');
-if (invite.length === 5) {
-  setMode('versus');
-  el.joinCode.value = invite;
-  el.joinBtn.disabled = false;
-  connLine('Ready to join match ' + invite + '.');
-} else {
-  setMode('daily');
+function showMaintenance() {
+  stopClip();
+  match?.link?.close();
+  el.maintOverlay.hidden = false;
+  el.maintNotice.textContent = window.LUKELESS_CONFIG?.maintenanceNotice
+    || 'lukeless is down for a quick update. Back in a few minutes.';
 }
 
-if (!LS.get('seen', false)) { howDlg.showModal(); LS.set('seen', true); }
+/* Polls config.js itself rather than some separate status endpoint, so
+   there is exactly one file to edit to take the site up or down. Compared
+   once against whatever was true when *this* page instance loaded — on a
+   mismatch it reloads, and the boot check below decides what that reload
+   shows. no-store, since serve.json already asks for that locally and a
+   stale cached copy defeats the entire point on a real deploy. */
+function pollMaintenance() {
+  const was = !!window.LUKELESS_CONFIG?.maintenance;
+  setInterval(async () => {
+    try {
+      const text = await fetch('config.js?t=' + Date.now(), { cache: 'no-store' }).then((r) => r.text());
+      if (/maintenance:\s*true/.test(text) !== was) location.reload();
+    } catch { /* offline for a moment — next tick will catch it */ }
+  }, MAINT_POLL_MS);
+}
+
+// ── boot ───────────────────────────────────────────────────────────────────
+
+pollMaintenance();
+
+if (window.LUKELESS_CONFIG?.maintenance) {
+  showMaintenance();
+} else {
+  el.vsName.value = LS.get('name', '');
+  syncPacks();
+  applyVolume();
+  drawStats();
+
+  /* ?vs=CODE is an invite. Land straight in the 1v1 tab with the code filled
+     in rather than making someone type what they just clicked. */
+  const invite = normaliseCode(new URLSearchParams(location.search).get('vs') ?? '');
+  if (invite.length === 5) {
+    setMode('versus');
+    el.joinCode.value = invite;
+    el.joinBtn.disabled = false;
+    connLine('Ready to join match ' + invite + '.');
+  } else {
+    setMode('daily');
+  }
+
+  if (!LS.get('seen', false)) { howDlg.showModal(); LS.set('seen', true); }
+}

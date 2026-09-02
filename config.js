@@ -6,6 +6,17 @@
  */
 
 window.LUKELESS_CONFIG = {
+  // ── maintenance ──
+  // There is no server behind this site to restart — it's static pages, and a
+  // 1v1 match is two browsers talking directly to each other with nothing of
+  // ours in between. This flag is what stands in for one: flip it here and
+  // push (or run ./restart.sh, which does both halves of that for you), and
+  // every open tab notices within about ten seconds and reloads onto the
+  // notice below — which is also the only way to actually interrupt a match
+  // already in progress, short of running a server that could.
+  maintenance: false,
+  maintenanceNotice: "lukeless is down for a quick update. Back in a few minutes.",
+
   // Extra ICE servers. Roughly 10-20% of network pairs — symmetric NAT on both
   // ends, mostly — cannot reach each other without a TURN relay.
   //

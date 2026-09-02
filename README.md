@@ -81,9 +81,14 @@ playlist, plus an "Everything" pack when there is more than one. Results are
 cached in `.cache/`, so a second playlist only costs searches for its own rows.
 Delete the cache to re-resolve from scratch.
 
-The build paces itself at about eighteen searches a minute because the store
-starts refusing at twenty. A cold 239-row playlist takes roughly a quarter of an
-hour. Leave it running.
+The build paces itself against the store rather than at a fixed rate — every
+refusal widens the gap between calls, every clean stretch narrows it, so it
+settles wherever the store is actually willing to answer instead of guessing at
+a number. A cold playlist can take anywhere from a few minutes to a few hours
+depending on how hard the address has been leaning on the store lately. Leave it
+running; it writes the cache as it goes; and refusals are never cached, so a
+second run (or `--offline` to rebuild from what is already cached) only retries
+what actually failed.
 
 ## 1v1
 
@@ -109,6 +114,32 @@ ends and it needs a TURN relay. `config.js` has a commented-out slot for one.
 [PeerJS]: https://peerjs.com/
 [clearline]: https://aidiotic.github.io/clearline/
 
+## Taking it down
+
+There is no server behind this site to restart — it's static pages on GitHub
+Pages, and a 1v1 match runs peer-to-peer with nothing of ours in the middle. The
+closest real equivalent to a restart is `config.js`'s `maintenance` flag: flip
+it on, and every open tab — mid-match or sitting on the menu — notices within
+about ten seconds and reloads onto the notice in `maintenanceNotice`. That
+reload is also the only way to interrupt a match already running, since there
+is no server that could reach into it either.
+
+```bash
+./restart.sh "optional reason shown on the maintenance page"
+```
+
+This flips the flag on, pushes, waits for GitHub Pages to actually publish it
+(polled against the Pages build API, not a guessed sleep), then flips it back
+off, pushes, and waits again. Know the real timing before leaning on this for
+anything time-sensitive: each half waits on an actual Pages build, usually
+30-90 seconds but not guaranteed, so a full cycle is a couple of minutes, not
+ten seconds — the ten seconds is how fast an *already-open tab* reacts once the
+change is live, not how fast publishing itself happens.
+
+To do it by hand instead of running the script: edit `maintenance` and
+`maintenanceNotice` in `config.js` (or run
+`node scripts/set-maintenance.mjs true "reason"`), commit, and push.
+
 ## Layout
 
 ```
@@ -120,6 +151,9 @@ build-songs.mjs   playlists/ + Apple's catalogue -> songs.js
 parse.mjs         the Spotify-paste parser, lifted from lukebox
 scan-apple-music.mjs
                   a local Apple Music library -> playlists/mine.json
+restart.sh        take the site down for maintenance, then back up
+scripts/set-maintenance.mjs
+                  flips config.js's maintenance flag; restart.sh's building block
 src/app.js        the game
 src/versus.js     the 1v1 link
 playlists/        Spotify pastes (.txt) and track lists (.json)
