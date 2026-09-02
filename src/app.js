@@ -171,12 +171,48 @@ function dailyIndex(day) {
 
 const hashCode = (s) => [...s].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 99991, 0);
 
-/* Laufey is weighted up. She is 97 of the 623 songs, which on a straight draw
-   would put her on screen about one round in six; this makes it closer to one
-   in two. Matched on the artist field, so features and collaborations count. */
+/* Laufey is weighted up within whatever pool is playing. She is 97 of the 623
+   songs, which on a straight draw would put her on screen about one round in
+   six; this makes it closer to one in two. Matched on the artist field, so
+   features and collaborations count. */
 const LAUFEY = /(^|[^a-z])laufey([^a-z]|$)/i;
 const LAUFEY_WEIGHT = 5;
-const weightOf = (i) => (LAUFEY.test(SONGS[i].artist) ? LAUFEY_WEIGHT : 1);
+const rawWeight = (i) => (LAUFEY.test(SONGS[i].artist) ? LAUFEY_WEIGHT : 1);
+
+/* Luke's playlist and "mine" sit at 184 and 455 songs, so on Everything a flat
+   shuffle surfaces one of mine about four times as often as one of Luke's —
+   not because either playlist matters more, just because one of us kept fewer
+   downloads.
+ *
+ * Each pack's songs are rescaled so the *pack's total* weight lands on a fixed
+   target no matter how many songs are in it — and, importantly, no matter how
+   Laufey's boost has already skewed things inside that pack. Doing this
+   multiplicatively instead (pack weight times Laufey weight) does not work:
+   since every Laufey song lives in "mine", her boost would inflate mine's
+   total share on top of whatever the pack target was aiming for, and the two
+   biases would compound into something well past "slightly more". Normalizing
+   each pack's sum first keeps them independent — Laufey still gets more than
+   an average "mine" song, but "mine" as a whole stays at its target regardless.
+   MINE_EDGE sets that target a little above Luke's, for roughly 57/43 rather
+   than even. All of this is computed once, since the packs and Laufey's
+   in-pack boost are both fixed once songs.js is generated.
+ *
+ * Only Everything mixes packs, so only Everything needs any of this. Picking
+ * either playlist on its own draws from it undiluted, at even odds among
+ * itself (Laufey aside). */
+const MINE_EDGE = 1.3;
+
+const ALL_WEIGHT = PACKS.length > 1 ? (() => {
+  const table = new Map();
+  for (const p of PACKS) {
+    const target = p.id === 'mine' ? MINE_EDGE : 1;
+    const sum = p.songs.reduce((a, i) => a + rawWeight(i), 0);
+    for (const i of p.songs) table.set(i, (table.get(i) ?? 0) + (rawWeight(i) / sum) * target);
+  }
+  return table;
+})() : null;
+
+const weightOf = (i) => (packId === 'all' && ALL_WEIGHT) ? (ALL_WEIGHT.get(i) ?? rawWeight(i)) : rawWeight(i);
 
 /* Weighted shuffle, Efraimidis-Spirakis: give each song a key of r^(1/weight)
    and sort by it. Ordering by that key is equivalent to drawing without
