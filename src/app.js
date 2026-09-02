@@ -173,10 +173,11 @@ const hashCode = (s) => [...s].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 999
 
 /* Laufey is weighted up within whatever pool is playing. She is 97 of the 623
    songs, which on a straight draw would put her on screen about one round in
-   six; this makes it closer to one in two. Matched on the artist field, so
-   features and collaborations count. */
+   six; 2.5x brings that closer to one in three without crowding out
+   everything else the way an early 5x cut did. Matched on the artist field,
+   so features and collaborations count. */
 const LAUFEY = /(^|[^a-z])laufey([^a-z]|$)/i;
-const LAUFEY_WEIGHT = 5;
+const LAUFEY_WEIGHT = 2.5;
 const rawWeight = (i) => (LAUFEY.test(SONGS[i].artist) ? LAUFEY_WEIGHT : 1);
 
 /* Luke's playlist and "mine" sit at 184 and 455 songs, so on Everything a flat
@@ -193,14 +194,18 @@ const rawWeight = (i) => (LAUFEY.test(SONGS[i].artist) ? LAUFEY_WEIGHT : 1);
    biases would compound into something well past "slightly more". Normalizing
    each pack's sum first keeps them independent — Laufey still gets more than
    an average "mine" song, but "mine" as a whole stays at its target regardless.
-   MINE_EDGE sets that target a little above Luke's, for roughly 57/43 rather
-   than even. All of this is computed once, since the packs and Laufey's
-   in-pack boost are both fixed once songs.js is generated.
+   MINE_EDGE sets that target a little above Luke's — a real playthrough
+   only samples a handful of rounds at a time, so even a mathematically fair
+   45/55 split can run a visible losing streak for one side by pure chance;
+   1.15 keeps Luke's from needing to claw back from as far behind when that
+   happens, while mine still edges it. All of this is computed once, since
+   the packs and Laufey's in-pack boost are both fixed once songs.js is
+   generated.
  *
  * Only Everything mixes packs, so only Everything needs any of this. Picking
  * either playlist on its own draws from it undiluted, at even odds among
  * itself (Laufey aside). */
-const MINE_EDGE = 1.3;
+const MINE_EDGE = 1.15;
 
 const ALL_WEIGHT = PACKS.length > 1 ? (() => {
   const table = new Map();
@@ -306,7 +311,18 @@ function revealHint() {
 let titles = [], acList = [], acSel = -1, chosen = null;
 
 function rebuildTitles() {
-  titles = pool().map((i) => ({ i, title: SONGS[i].title, key: norm(SONGS[i].title) }));
+  /* `key` is the title alone — it's what a guess has to exactly equal to be
+     submittable, and what the guessed-set / share text are built from, so it
+     has to stay title-only or a repeat guess would stop being recognized as
+     one. `searchKey` is only for the filter below, and folds the artist in
+     too, so typing an artist's name (recognized them, not sure of the title)
+     narrows the list the same way typing part of the title does. */
+  titles = pool().map((i) => ({
+    i,
+    title: SONGS[i].title,
+    key: norm(SONGS[i].title),
+    searchKey: norm(SONGS[i].title + ' ' + SONGS[i].artist),
+  }));
 }
 
 function updateAC() {
@@ -315,8 +331,8 @@ function updateAC() {
   if (!q || !S || S.done) { el.ac.classList.remove('show'); return; }
 
   const guessed = new Set(S.rows.filter((r) => r.kind !== 'skip').map((r) => norm(r.text)));
-  acList = titles.filter((t) => t.key.includes(q) && !guessed.has(t.key))
-    .sort((a, b) => a.key.indexOf(q) - b.key.indexOf(q) || a.key.localeCompare(b.key))
+  acList = titles.filter((t) => t.searchKey.includes(q) && !guessed.has(t.key))
+    .sort((a, b) => a.searchKey.indexOf(q) - b.searchKey.indexOf(q) || a.key.localeCompare(b.key))
     .slice(0, 40);
 
   if (!acList.length) { el.ac.classList.remove('show'); return; }
