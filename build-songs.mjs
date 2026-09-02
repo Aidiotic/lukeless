@@ -29,8 +29,21 @@ const CACHE = resolve(HERE, '.cache/itunes.json');
    build works before a second playlist has been added. */
 const PACKS = [
   { id: 'luke', name: "Luke's playlist", file: 'luke.txt' },
-  { id: 'mine', name: 'My playlist', file: 'mine.txt' },
+  { id: 'mine', name: 'My library', file: 'mine.json' },
 ];
+
+/* Two input shapes. A .txt is a raw Spotify paste and goes through lukebox's
+   parser; a .json is already a list of { title, artists, album }, which is what
+   scan-apple-music.mjs writes. */
+function readPlaylist(path) {
+  const text = readFileSync(path, 'utf8');
+  if (path.endsWith('.json')) {
+    return JSON.parse(text)
+      .filter((t) => t?.title && t.artists?.length)
+      .map((t) => ({ title: t.title, artists: t.artists, album: t.album ?? null }));
+  }
+  return parse(text);
+}
 
 // ── matching ───────────────────────────────────────────────────────────────
 
@@ -81,6 +94,10 @@ function score(row, hit) {
   const coll = hit.collectionName || '';
   if (/karaoke|tribute|made popular|in the style of|cover version/i.test(coll + hit.artistName)) s += 100;
   if (/\blive\b/i.test(coll) && !/\blive\b/i.test(row.title)) s += 15;
+
+  // Explicit is not filtered — it is preferred. A "cleaned" release is a
+  // different master, and the edit can land right on the hook the clip uses.
+  if (hit.trackExplicitness === 'cleaned') s += 3;
 
   return s;
 }
@@ -176,7 +193,7 @@ async function main() {
       continue;
     }
 
-    const rows = parse(readFileSync(path, 'utf8'));
+    const rows = readPlaylist(path);
     const members = [], missing = [];
     console.log(`\n${pack.name}: ${rows.length} rows`);
 

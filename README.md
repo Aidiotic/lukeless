@@ -32,15 +32,45 @@ That has three consequences worth knowing before they look like bugs:
 
 ## Adding a playlist
 
-Playlists live in `playlists/` as raw pastes out of Spotify's desktop app —
-select the tracks, copy, save as a `.txt`. The parser is lukebox's, unchanged, so
-the same pastes work in both projects.
+Playlists live in `playlists/`, in either of two shapes.
 
-1. Drop the paste in `playlists/`, e.g. `playlists/mine.txt`.
-2. Make sure it has an entry in the `PACKS` list at the top of `build-songs.mjs`.
-   `luke.txt` and `mine.txt` are already listed; a missing file is skipped with a
-   note, so the build works with either or both.
-3. Run the build.
+**A Spotify paste** (`.txt`) — select the tracks in the desktop app, copy, save.
+The parser is lukebox's, unchanged, so the same pastes work in both projects.
+`playlists/luke.txt` is one of these.
+
+**A track list** (`.json`) — an array of `{ title, artists, album }`. Useful when
+the songs are not in Spotify at all.
+
+### From a local Apple Music library
+
+```bash
+node scan-apple-music.mjs > playlists/mine.json
+```
+
+This reads the *names* out of `~/Music`, and only the names. Apple Music's
+offline downloads are FairPlay-encrypted `.m4p`, and the library index is
+Apple's proprietary `hfma` binary; neither is opened, and neither could be
+legally decoded anyway. What is readable without any of that is the folder
+layout Music.app writes —
+
+```
+Media.localized/Apple Music/<artist>/<album>/<NN title>.m4p
+```
+
+— which is all the build needs to find each song again in Apple's public
+catalogue and take its preview clip. The encrypted audio is never touched; the
+library is used purely as a list of what you own. Downloads still in flight, in
+`Downloads-Music/`, get swept up as well.
+
+Explicit tracks are kept, and preferred over a "cleaned" release of the same
+song, since a censored version is a different master and the edit can land right
+on the hook the clip uses.
+
+### Then
+
+Make sure the playlist has an entry in the `PACKS` list at the top of
+`build-songs.mjs` — `luke.txt` and `mine.json` are already listed, and a missing
+file is skipped with a note, so the build works with either or both. Then:
 
 ```bash
 node build-songs.mjs
@@ -88,9 +118,11 @@ config.js         ICE servers and signalling, editable on a deployed site
 songs.js          generated — do not edit by hand
 build-songs.mjs   playlists/ + Apple's catalogue -> songs.js
 parse.mjs         the Spotify-paste parser, lifted from lukebox
+scan-apple-music.mjs
+                  a local Apple Music library -> playlists/mine.json
 src/app.js        the game
 src/versus.js     the 1v1 link
-playlists/        raw Spotify pastes
+playlists/        Spotify pastes (.txt) and track lists (.json)
 ```
 
 ## Local
