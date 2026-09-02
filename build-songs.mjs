@@ -235,7 +235,10 @@ async function main() {
       members.push(idx);
     }
 
-    packs.push({ id: pack.id, name: pack.name, songs: members });
+    /* Deduped: a playlist can list the same song twice, and two rows can also
+       resolve to one release. Left in, a repeat would let the daily picker and
+       a 1v1 draw serve the same song for two different rounds. */
+    packs.push({ id: pack.id, name: pack.name, songs: [...new Set(members)] });
     console.log(`  matched ${members.length}/${rows.length}`);
     if (missing.length) {
       console.log(`  no clip for ${missing.length}:`);
