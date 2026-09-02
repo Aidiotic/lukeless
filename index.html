@@ -31,8 +31,8 @@
   <!-- ── the lobby: only up in 1v1, before a match is running ── -->
   <div class="card vs-lobby" id="lobby">
     <h2 id="lobbyTitle">Play someone</h2>
-    <p id="lobbyText">One of you opens a match and reads out the code. Six songs, same
-      six for both of you, fastest correct guess takes the round. Whichever difficulty
+    <p id="lobbyText">One of you opens a match and reads out the code. Both players get
+      the same six songs on Normal or fourteen on Insane; fastest correct guess takes the round. Whichever difficulty
       the host has picked below is what the whole match plays at.</p>
 
     <div class="field">
@@ -121,6 +121,7 @@
         <input type="text" id="guess" placeholder="Search by title or artist…" autocomplete="off"
                autocorrect="off" autocapitalize="off" spellcheck="false">
       </div>
+      <div class="decoys" id="decoys" hidden></div>
       <div class="hintbar" id="hintbar">
         <button class="hint-btn" id="hintBtn">Reveal first word</button>
         <div class="hint-word" id="hintWord" hidden></div>
@@ -170,10 +171,12 @@
      race the same clip, and the round goes to whoever needs fewer seconds.</p>
   <p><b>Insane</b>: clips start at a tenth of a second — <b>0.1s → 0.5s → 0.7s → 1s → 1.5s</b>,
      five tries instead of six, worth more per try (<b>200 / 150 / 110 / 80 / 50</b>).
-     No autocomplete — you type the title yourself, exactly, with nothing suggested.
+     Five decoy titles are shown, but the real answer is not: you still type the title yourself exactly.
+     A wrong title costs two steps, so missing at 0.1s jumps straight to 0.7s.
      It also leans hard on lofi cuts where the catalogue has them. 1v1 has its own
      Normal/Insane toggle in the lobby — whichever the host picks before opening the
-     match is what both of you play, and it can't be changed once a round is live.</p>
+     match is what both of you play, and it can't be changed once a round is live.
+     Insane 1v1 lasts fourteen rounds instead of six.</p>
   <p>Clips come from Apple's previews, so they usually start at the hook rather than
      the first note. Consider it a feature.</p>
   <p>1v1 runs directly between the two browsers, with no server keeping score. That

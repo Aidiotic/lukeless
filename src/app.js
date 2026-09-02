@@ -8,9 +8,8 @@
  *
  * The clip-length ladder and its scoring belong to the ROUND, not the mode —
  * each round carries its own `cfg` (steps + points), set once in beginRound
- * and read everywhere else as `S.cfg`. 1v1 always uses NORMAL_CFG regardless
- * of what a player has selected outside a match, since both sides have to be
- * scoring the same ladder for a round to mean the same thing to both of them.
+ * and read everywhere else as `S.cfg`. A 1v1 round uses the host's locked-in
+ * difficulty, sent during setup, so both sides score the same ladder.
  */
 
 import { Versus, makeCode, normaliseCode } from './versus.js';
@@ -25,7 +24,8 @@ const INSANE_CFG = { steps: [0.1, 0.5, 0.7, 1, 1.5], points: [200, 150, 110, 80,
 const HINT_COST = 25;
 const EPOCH = Date.UTC(2026, 0, 1);
 
-const VS_ROUNDS = 6;
+const NORMAL_VS_ROUNDS = 6;
+const INSANE_VS_ROUNDS = 14;
 const VS_CLOCK = 90;   // seconds a round is allowed to run before it forfeits
 
 const $ = (id) => document.getElementById(id);
@@ -92,14 +92,15 @@ let clockTimer = null;
 
 // ── scoring ────────────────────────────────────────────────────────────────
 
-const stage = () => Math.min(S.rows.length, S.cfg.steps.length - 1);
+const stageOf = (st) => Math.min(st.step ?? st.rows.length, st.cfg.steps.length - 1);
+const stage = () => stageOf(S);
 const limit = () => S.cfg.steps[stage()];
 
 function scoreOf(st) {
   if (!st?.won) return 0;
-  return Math.max(0, (st.cfg.points[st.rows.length - 1] ?? 0) - (st.hint ? HINT_COST : 0));
+  return Math.max(0, (st.cfg.points[stageOf(st)] ?? 0) - (st.hint ? HINT_COST : 0));
 }
-const secsOf = (st) => (st?.won ? st.cfg.steps[st.rows.length - 1] : null);
+const secsOf = (st) => (st?.won ? st.cfg.steps[stageOf(st)] : null);
 
 // ── volume ─────────────────────────────────────────────────────────────────
 
@@ -245,27 +246,24 @@ function weightedOrder(list, rnd) {
 }
 
 /* A running joke, not a weighting concern like the two above: every 5th
-   Endless song has a 70% chance of being AsapSCIENCE — the Pi songs, the
-   periodic table one, whatever else of theirs is in the catalogue — instead
-   of whatever the normal draw would give. Matched on artist rather than a
-   list of titles, so a future re-run of build-songs.mjs that resolves one
-   more of theirs (their "End of the Universe" song isn't in the catalogue
-   under a name close enough to match today) is picked up automatically.
+   Endless song is an AsapSCIENCE track when the selected pack contains one.
+   This is guaranteed instead of probabilistic; a 70% roll made a correctly
+   configured run still look broken.
  *
  * Only Endless — "every 5 songs" only means something as a counter across a
    continuous run of rounds, which Daily (one a day) and 1v1 (a fixed, shared
-   6-song draw both players need to see the same way) don't have. Resets on
+   draw both players need to see the same way) don't have. Resets on
    reload; there's no reason to persist a joke across visits. Falls back to a
-   normal draw if the current pack has no AsapSCIENCE at all (e.g. Luke's
-   playlist), rather than reaching outside the selected pool. */
+   If the current pack has none (Luke's does not), it falls back to a normal
+   draw rather than violating the selected playlist. */
 let endlessCount = 0;
 const ASAPSCIENCE = /(^|[^a-z])asapscience([^a-z]|$)/i;
 
 function pickEndlessSong() {
   endlessCount++;
-  if (endlessCount % 5 === 0 && Math.random() < 0.7) {
-    const theirs = pool().filter((i) => ASAPSCIENCE.test(SONGS[i].artist));
-    if (theirs.length) return theirs[Math.floor(Math.random() * theirs.length)];
+  if (endlessCount % 5 === 0) {
+    const candidates = pool().filter((i) => ASAPSCIENCE.test(SONGS[i].artist));
+    if (candidates.length) return candidates[Math.floor(Math.random() * candidates.length)];
   }
   return weightedOrder(pool(), Math.random)[0];
 }
@@ -274,9 +272,9 @@ function pickEndlessSong() {
    any — matched on title, since a lofi cut is its own catalogue entry, not a
    variant of the normal one. Only 4 exist today (all Laufey, all in "My
    library"), so on Luke's playlist or with a fresh catalogue this always
-   falls back to a normal draw, same safety net as the AsapSCIENCE bias above. */
+   falls back to a normal draw. */
 const LOFI_RE = /\(lofi version\)/i;
-const LOFI_CHANCE = 0.7;
+const LOFI_CHANCE = 0.95;
 
 function pickInsaneSong() {
   if (Math.random() < LOFI_CHANCE) {
@@ -286,9 +284,25 @@ function pickInsaneSong() {
   return weightedOrder(pool(), Math.random)[0];
 }
 
-function beginRound(idx, restore, cfg = NORMAL_CFG) {
-  S = { idx, rows: [], done: false, won: false, hint: false, cfg };
-  if (restore) Object.assign(S, restore, { idx, cfg });
+function buildDecoys(idx) {
+  const answer = norm(SONGS[idx].title), seen = new Set([answer]);
+  const candidates = weightedOrder(pool().filter((i) => i !== idx), rng(hashCode(BUILD + '|decoys|' + idx)));
+  return candidates.filter((i) => {
+    const key = norm(SONGS[i].title);
+    if (seen.has(key)) return false;
+    seen.add(key); return true;
+  }).slice(0, 5);
+}
+
+function beginRound(idx, restore, cfg = NORMAL_CFG, decoys = null) {
+  S = {
+    idx, rows: [], done: false, won: false, hint: false, cfg, step: 0,
+    decoys: cfg === INSANE_CFG ? (decoys ?? buildDecoys(idx)) : [],
+  };
+  if (restore) {
+    Object.assign(S, restore, { idx, cfg });
+    if (restore.step == null) S.step = Math.min(S.rows.length, cfg.steps.length - 1);
+  }
   audio.src = SONGS[idx].preview;
   audio.load();
   el.gameArea.style.display = '';
@@ -334,7 +348,10 @@ function render() {
   // subtracting them in floating point (0.7 - 0.5) can land on
   // 0.19999999999999998 rather than 0.2 without this.
   el.skipBtn.textContent = S.rows.length >= steps.length - 1
-    ? 'Give up' : 'Skip (+' + Math.round((steps[stage() + 1] - lim) * 10) / 10 + 's)';
+    ? 'Give up'
+    : stage() >= steps.length - 1
+      ? 'Skip (max clip)'
+      : 'Skip (+' + Math.round((steps[stage() + 1] - lim) * 10) / 10 + 's)';
 
   showHint();
   // No hint in 1v1 (see revealHint) or Insane — Insane is "no help at all" by
@@ -344,6 +361,18 @@ function render() {
   el.nextBtn.style.display = mode === 'daily' || mode === 'versus' ? 'none' : '';
   el.shareBtn.style.display = mode === 'versus' ? 'none' : '';
   el.reportRow.style.display = mode === 'versus' ? 'none' : '';
+  renderDecoys();
+}
+
+function renderDecoys() {
+  const show = insaneRules() && S && !S.done;
+  el.decoys.hidden = !show;
+  if (!show) { el.decoys.innerHTML = ''; return; }
+  const guessed = new Set(S.rows.filter((r) => r.kind === 'wrong').map((r) => norm(r.text)));
+  el.decoys.innerHTML = '<div class="decoys-label">5 decoys — the real title is not shown</div><div class="decoy-list">' +
+    S.decoys.map((i) => '<button class="decoy" data-decoy="' + i + '"' +
+      (guessed.has(norm(SONGS[i].title)) ? ' disabled' : '') + '>' + escapeHtml(SONGS[i].title) + '</button>').join('') +
+    '</div>';
 }
 
 function showHint() {
@@ -406,7 +435,10 @@ function updateAC() {
     // empty so a stray ArrowUp/Down or Enter from the shared keydown handler
     // has nothing to act on.
     el.ac.classList.remove('show');
-    const t = titles.find((x) => x.key === q && !guessed.has(x.key));
+    const answerKey = norm(SONGS[S.idx].title);
+    const t = q === answerKey
+      ? titles.find((x) => x.i === S.idx)
+      : titles.find((x) => x.key === q && !guessed.has(x.key));
     if (t) { chosen = t; el.submitBtn.disabled = false; }
     return;
   }
@@ -445,6 +477,7 @@ function submit() {
 
   const right = t.i === S.idx;
   S.rows.push({ kind: right ? 'right' : 'wrong', text: t.title, hint: right && S.hint });
+  if (!right) S.step = Math.min(stage() + (insaneRules() ? 2 : 1), S.cfg.steps.length - 1);
   el.guess.value = ''; el.ac.classList.remove('show');
   acList = []; chosen = null; el.submitBtn.disabled = true;
   stopClip();
@@ -457,6 +490,7 @@ function submit() {
 function skip() {
   if (!S || S.done) return;
   S.rows.push({ kind: 'skip', text: 'Skipped' });
+  S.step = Math.min(stage() + 1, S.cfg.steps.length - 1);
   stopClip();
   if (S.rows.length >= S.cfg.steps.length) finish(false);
   else { render(); saveDaily(); pushProgress(); setTimeout(playClip, 220); }
@@ -501,7 +535,10 @@ function showResult(verdict) {
 
 function saveDaily() {
   if (mode !== 'daily' || !S) return;
-  LS.set('daily', { day: dayNumber(), pack: packId, idx: S.idx, rows: S.rows, done: S.done, won: S.won, hint: S.hint });
+  LS.set('daily', {
+    day: dayNumber(), pack: packId, idx: S.idx, rows: S.rows, done: S.done,
+    won: S.won, hint: S.hint, step: S.step,
+  });
 }
 
 // ── stats, leaderboard, reports ────────────────────────────────────────────
@@ -606,7 +643,7 @@ function newMatch(isHost, code) {
   return {
     link: null, isHost, code,
     them: 'Opponent',
-    round: -1, songs: [],
+    round: -1, songs: [], decoys: [],
     mine: [], theirs: [],           // per-round { pts, secs, won, tries }
     live: null,                     // opponent's progress this round
     phase: 'lobby',
@@ -618,9 +655,9 @@ function newMatch(isHost, code) {
 
 /* Host picks the songs. Sampling without replacement, so a match never asks
    the same song twice. Insane draws lean lofi the same way pickInsaneSong
-   does for solo play, just without replacement across all six rounds. */
+   does for solo play, just without replacement across the full match. */
 function drawSongs(insane) {
-  const list = pool(), n = Math.min(VS_ROUNDS, list.length);
+  const list = pool(), n = Math.min(insane ? INSANE_VS_ROUNDS : NORMAL_VS_ROUNDS, list.length);
   if (!insane) return weightedOrder(list, Math.random).slice(0, n);
 
   const used = new Set(), out = [];
@@ -702,7 +739,11 @@ function onVersusMessage(msg) {
       if (match.isHost) {
         match.insane = vsInsane;
         match.songs = drawSongs(match.insane);
-        match.link.send({ t: 'setup', songs: match.songs, pack: packId, insane: match.insane, rounds: match.songs.length });
+        match.decoys = match.insane ? match.songs.map(buildDecoys) : [];
+        match.link.send({
+          t: 'setup', songs: match.songs, decoys: match.decoys,
+          pack: packId, insane: match.insane, rounds: match.songs.length,
+        });
         startVersusRound(0);
         match.link.send({ t: 'start', round: 0 });
       }
@@ -714,6 +755,7 @@ function onVersusMessage(msg) {
       if (msg.pack && ALL_PACKS.some((p) => p.id === msg.pack)) { packId = msg.pack; syncPacks(); }
       match.insane = !!msg.insane;
       match.songs = msg.songs ?? [];
+      match.decoys = Array.isArray(msg.decoys) ? msg.decoys : [];
       break;
     }
 
@@ -771,7 +813,7 @@ function startVersusRound(n) {
   el.guess.placeholder = match.insane
     ? 'Type the exact title — no suggestions…' : 'Search by title or artist…';
 
-  beginRound(match.songs[n], null, match.insane ? INSANE_CFG : NORMAL_CFG);
+  beginRound(match.songs[n], null, match.insane ? INSANE_CFG : NORMAL_CFG, match.decoys[n]);
   drawScoreboard();
   startClock();
   el.guess.focus();
@@ -916,7 +958,7 @@ function drawScoreboard() {
   el.themPips.innerHTML = pips(match.live?.marks ?? []);
 }
 
-const pips = (marks) => Array.from({ length: NORMAL_CFG.steps.length },
+const pips = (marks) => Array.from({ length: (match?.insane ? INSANE_CFG : NORMAL_CFG).steps.length },
   (_, i) => '<span class="pip ' + (marks[i] ?? '') + '"></span>').join('');
 
 function endMatch(why) {
@@ -1013,6 +1055,15 @@ el.guess.addEventListener('keydown', (e) => {
 el.ac.addEventListener('mousedown', (e) => {
   const d = e.target.closest('[data-n]');
   if (d) { e.preventDefault(); pick(+d.dataset.n); }
+});
+el.decoys.addEventListener('click', (e) => {
+  const b = e.target.closest('[data-decoy]');
+  if (!b || b.disabled || !S || S.done) return;
+  const i = Number(b.dataset.decoy);
+  chosen = titles.find((t) => t.i === i) ?? null;
+  if (!chosen) return;
+  el.guess.value = chosen.title;
+  submit();
 });
 document.addEventListener('click', (e) => {
   if (!e.target.closest('.searchbox')) el.ac.classList.remove('show');

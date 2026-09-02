@@ -3,7 +3,7 @@
 Name the song from a one-second clip. A guessing game over [lukebox][]'s playlist,
 in the shape of Heardle: you get a second of a song, and every wrong guess or skip
 buys you a little more of it. Solo against a daily song, endlessly against random
-ones, or 1v1 against a friend over six rounds.
+ones, or 1v1 against a friend over six rounds (fourteen on Insane).
 
 Live at **[aidiotic.github.io/lukeless][live]**.
 
@@ -97,7 +97,8 @@ handshake — the same arrangement [clearline][] uses for calls. One player open
 match and gets a five-character code; the other types it in, or follows the invite
 link. From there:
 
-- Six rounds, the same six songs on both screens, drawn by whoever opened the match.
+- Six rounds on Normal or fourteen on Insane, with the same songs on both screens,
+  drawn by whoever opened the match.
 - You both race the same clip. Fewer seconds scores more (100/80/60/45/30/20), and
   the round goes to the higher score.
 - A round has a 90-second clock. Running it out forfeits that round, not the match.
