@@ -935,7 +935,11 @@ el.modeVersus.addEventListener('click', () => setMode('versus'));
 
 el.packs.addEventListener('click', (e) => {
   const b = e.target.closest('[data-pack]');
-  if (!b || (mode === 'versus' && match?.phase !== 'lobby')) return;
+  // Only block switching once a match is actually under way. `match` is null
+  // before one has been opened or joined — `match?.phase` then reads
+  // undefined, which is never 'lobby', so this used to block every pack
+  // click made on the 1v1 tab before a match even existed.
+  if (!b || (mode === 'versus' && match && match.phase !== 'lobby')) return;
   packId = b.dataset.pack;
   localStorage.setItem('lukeless.pack', packId);
   syncPacks();
