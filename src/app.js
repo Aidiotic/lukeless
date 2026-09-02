@@ -33,8 +33,13 @@ const ALL_PACKS = PACKS.length > 1
    the same song on both screens. Cheap fingerprint, checked at handshake. */
 const BUILD = SONGS.length + '.' + SONGS.reduce((h, s) => (h * 31 + s.title.length) % 99991, 7);
 
-let packId = localStorage.getItem('lukeless.pack') ?? ALL_PACKS[0]?.id;
-if (!ALL_PACKS.some((p) => p.id === packId)) packId = ALL_PACKS[0]?.id;
+/* Everything by default when there is more than one playlist to combine —
+   opening on one person's list buries the rest of the songs behind a control
+   most people never touch. A stored choice still wins over it. */
+const DEFAULT_PACK = ALL_PACKS.find((p) => p.id === 'all')?.id ?? ALL_PACKS[0]?.id;
+
+let packId = localStorage.getItem('lukeless.pack') ?? DEFAULT_PACK;
+if (!ALL_PACKS.some((p) => p.id === packId)) packId = DEFAULT_PACK;
 
 const pack = () => ALL_PACKS.find((p) => p.id === packId) ?? ALL_PACKS[0];
 const pool = () => pack().songs;
@@ -568,8 +573,13 @@ function onVersusMessage(msg) {
     case 'ready':
       if (msg.round !== match.round) break;
       match.readyThem = true;
+      // Only ever relabel this button in readyUp, i.e. when *this* player has
+      // actually pressed it. Writing "waiting" here on the strength of the
+      // opponent being ready deadlocked the match: the player who had not
+      // pressed yet was told to wait, so they never pressed, so the round
+      // never advanced and it sat there for good.
+      drawScoreboard();
       if (match.isHost) maybeAdvance();
-      else el.nextBtn.textContent = 'Waiting for host…';
       break;
 
     case 'over':
@@ -676,7 +686,9 @@ function readyUp() {
   if (!match || match.phase !== 'roundOver') return;
   match.readyMe = true;
   el.nextBtn.disabled = true;
-  el.nextBtn.textContent = match.isHost ? 'Waiting for ' + match.them + '…' : 'Waiting for host…';
+  // Whichever side you are, what you are waiting on is the other player: the
+  // round advances the moment both have pressed.
+  el.nextBtn.textContent = 'Waiting for ' + match.them + '…';
   match.link.send({ t: 'ready', round: match.round });
   if (match.isHost) maybeAdvance();
 }
@@ -733,7 +745,8 @@ function drawScoreboard() {
 
   const tr = match.theirs[match.round];
   el.themSub.textContent = tr
-    ? (tr.won ? 'solved at ' + tr.secs + 's · +' + tr.pts : 'missed')
+    ? (tr.won ? 'solved at ' + tr.secs + 's · +' + tr.pts : 'missed') +
+      (match.readyThem ? ' · ready' : '')
     : match.live ? 'on try ' + (match.live.marks.length + 1) : 'still listening';
 
   el.mePips.innerHTML = pips(S ? S.rows.map((r) => r.kind) : []);
