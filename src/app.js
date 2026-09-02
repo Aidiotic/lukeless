@@ -1,18 +1,28 @@
 /* lukeless — the game.
  *
- * Three modes over one engine. A round is always the same thing: a song index,
+ * Four modes over one engine. A round is always the same thing: a song index,
  * a list of guesses, and a clip that grows by one step every time you get it
- * wrong. Daily and Endless differ only in how the index is chosen. 1v1 differs
- * only in that the index arrives from the other browser and the result gets
- * sent back.
+ * wrong. Daily and Endless differ only in how the index is chosen. Insane
+ * differs in how brutal that growth is, and how you answer. 1v1 differs in
+ * that the index arrives from the other browser and the result gets sent back.
+ *
+ * The clip-length ladder and its scoring belong to the ROUND, not the mode —
+ * each round carries its own `cfg` (steps + points), set once in beginRound
+ * and read everywhere else as `S.cfg`. 1v1 always uses NORMAL_CFG regardless
+ * of what a player has selected outside a match, since both sides have to be
+ * scoring the same ladder for a round to mean the same thing to both of them.
  */
 
 import { Versus, makeCode, normaliseCode } from './versus.js';
 
-const STEPS  = [1, 2, 4, 7, 11, 16];
-const POINTS = [100, 80, 60, 45, 30, 20];
+const NORMAL_CFG = { steps: [1, 2, 4, 7, 11, 16], points: [100, 80, 60, 45, 30, 20] };
+
+/* Insane: 0.1s is not a typo. Five steps instead of six, and every step is
+   worth more than the equivalent normal-mode step, because getting anything
+   right off a tenth of a second is a different sport. */
+const INSANE_CFG = { steps: [0.1, 0.5, 0.7, 1, 1.5], points: [200, 150, 110, 80, 50] };
+
 const HINT_COST = 25;
-const MAX = STEPS[STEPS.length - 1];
 const EPOCH = Date.UTC(2026, 0, 1);
 
 const VS_ROUNDS = 6;
@@ -82,14 +92,14 @@ let clockTimer = null;
 
 // ── scoring ────────────────────────────────────────────────────────────────
 
-const stage = () => Math.min(S.rows.length, STEPS.length - 1);
-const limit = () => STEPS[stage()];
+const stage = () => Math.min(S.rows.length, S.cfg.steps.length - 1);
+const limit = () => S.cfg.steps[stage()];
 
 function scoreOf(st) {
   if (!st?.won) return 0;
-  return Math.max(0, (POINTS[st.rows.length - 1] ?? 0) - (st.hint ? HINT_COST : 0));
+  return Math.max(0, (st.cfg.points[st.rows.length - 1] ?? 0) - (st.hint ? HINT_COST : 0));
 }
-const secsOf = (st) => (st?.won ? STEPS[st.rows.length - 1] : null);
+const secsOf = (st) => (st?.won ? st.cfg.steps[st.rows.length - 1] : null);
 
 // ── volume ─────────────────────────────────────────────────────────────────
 
@@ -125,13 +135,15 @@ function stopClip() {
   audio.pause(); playing = false;
   el.playBtn.textContent = '▶';
   el.played.style.width = '0%';
-  el.time.textContent = '0.0 / ' + (S ? (S.done ? MAX : limit()) : STEPS[0]).toFixed(1) + 's';
+  const max = (s) => s.cfg.steps[s.cfg.steps.length - 1];
+  el.time.textContent = '0.0 / ' + (S ? (S.done ? max(S) : limit()) : NORMAL_CFG.steps[0]).toFixed(1) + 's';
 }
 
 function playClip() {
   if (!S) return;
   if (playing) { stopClip(); return; }
-  const lim = S.done ? MAX : limit();
+  const max = S.cfg.steps[S.cfg.steps.length - 1];
+  const lim = S.done ? max : limit();
   audio.currentTime = 0;
   audio.play().then(() => {
     playing = true;
@@ -140,7 +152,7 @@ function playClip() {
     const tick = () => {
       if (!playing) return;
       const t = Math.min(audio.currentTime, lim);
-      el.played.style.width = (t / MAX * 100) + '%';
+      el.played.style.width = (t / max * 100) + '%';
       el.time.textContent = t.toFixed(1) + ' / ' + lim.toFixed(1) + 's';
       raf = requestAnimationFrame(tick);
     };
@@ -258,9 +270,25 @@ function pickEndlessSong() {
   return weightedOrder(pool(), Math.random)[0];
 }
 
-function beginRound(idx, restore) {
-  S = { idx, rows: [], done: false, won: false, hint: false };
-  if (restore) Object.assign(S, restore, { idx });
+/* Insane draws mostly from tagged Lofi versions when the current pack has
+   any — matched on title, since a lofi cut is its own catalogue entry, not a
+   variant of the normal one. Only 4 exist today (all Laufey, all in "My
+   library"), so on Luke's playlist or with a fresh catalogue this always
+   falls back to a normal draw, same safety net as the AsapSCIENCE bias above. */
+const LOFI_RE = /\(lofi version\)/i;
+const LOFI_CHANCE = 0.7;
+
+function pickInsaneSong() {
+  if (Math.random() < LOFI_CHANCE) {
+    const lofi = pool().filter((i) => LOFI_RE.test(SONGS[i].title));
+    if (lofi.length) return lofi[Math.floor(Math.random() * lofi.length)];
+  }
+  return weightedOrder(pool(), Math.random)[0];
+}
+
+function beginRound(idx, restore, cfg = NORMAL_CFG) {
+  S = { idx, rows: [], done: false, won: false, hint: false, cfg };
+  if (restore) Object.assign(S, restore, { idx, cfg });
   audio.src = SONGS[idx].preview;
   audio.load();
   el.gameArea.style.display = '';
@@ -276,8 +304,10 @@ function beginRound(idx, restore) {
 function render() {
   if (!S) return;
 
+  const steps = S.cfg.steps, max = steps[steps.length - 1];
+
   el.guesses.innerHTML = '';
-  for (let i = 0; i < STEPS.length; i++) {
+  for (let i = 0; i < steps.length; i++) {
     const r = S.rows[i], d = document.createElement('div');
     d.className = 'row ' + (r ? r.kind : (i === S.rows.length && !S.done ? 'active empty' : 'empty'));
     const mark = r ? (r.kind === 'right' ? '✓' : r.kind === 'skip' ? '›' : '✕') : '';
@@ -289,22 +319,28 @@ function render() {
     el.guesses.appendChild(d);
   }
 
-  const lim = S.done ? MAX : limit();
-  el.unlocked.style.width = (lim / MAX * 100) + '%';
-  el.ticks.innerHTML = STEPS.map((s) =>
-    '<span class="tick' + (s <= lim ? ' on' : '') + '" style="left:' + (s / MAX * 100) + '%">' + s + 's</span>'
+  const lim = S.done ? max : limit();
+  el.unlocked.style.width = (lim / max * 100) + '%';
+  el.ticks.innerHTML = steps.map((s) =>
+    '<span class="tick' + (s <= lim ? ' on' : '') + '" style="left:' + (s / max * 100) + '%">' + s + 's</span>'
   ).join('');
   el.time.textContent = '0.0 / ' + lim.toFixed(1) + 's';
 
-  const left = STEPS.length - S.rows.length;
+  const left = steps.length - S.rows.length;
   el.status.textContent = S.done ? 'Full 30s preview below'
     : left + (left === 1 ? ' try left' : ' tries left');
 
-  el.skipBtn.textContent = S.rows.length >= STEPS.length - 1
-    ? 'Give up' : 'Skip (+' + (STEPS[stage() + 1] - lim) + 's)';
+  // Rounded to one decimal: Insane's steps are fractions of a second, and
+  // subtracting them in floating point (0.7 - 0.5) can land on
+  // 0.19999999999999998 rather than 0.2 without this.
+  el.skipBtn.textContent = S.rows.length >= steps.length - 1
+    ? 'Give up' : 'Skip (+' + Math.round((steps[stage() + 1] - lim) * 10) / 10 + 's)';
 
   showHint();
-  el.hintbar.hidden = mode === 'versus';
+  // No hint in 1v1 (see revealHint) or Insane — Insane is "no help at all" by
+  // design, and a hint that spells out a word doesn't sit well next to having
+  // to type the rest of the title yourself with no suggestions.
+  el.hintbar.hidden = mode === 'versus' || mode === 'insane';
   el.nextBtn.style.display = mode === 'daily' || mode === 'versus' ? 'none' : '';
   el.shareBtn.style.display = mode === 'versus' ? 'none' : '';
   el.reportRow.style.display = mode === 'versus' ? 'none' : '';
@@ -324,9 +360,10 @@ function showHint() {
 }
 
 function revealHint() {
-  // Not offered in 1v1: the two of you are racing the same clip, and a button
-  // that trades points for the answer only muddies who actually knew it.
-  if (mode === 'versus' || !S || S.done || S.hint) return;
+  // Not offered in 1v1 (the two of you are racing the same clip, and a
+  // button that trades points for the answer only muddies who actually knew
+  // it) or in Insane (the whole point of that mode is no help at all).
+  if (mode === 'versus' || mode === 'insane' || !S || S.done || S.hint) return;
   S.hint = true;
   showHint();
   saveDaily();
@@ -353,10 +390,22 @@ function rebuildTitles() {
 
 function updateAC() {
   const q = norm(el.guess.value);
-  chosen = null; el.submitBtn.disabled = true;
+  chosen = null; el.submitBtn.disabled = true; acList = [];
   if (!q || !S || S.done) { el.ac.classList.remove('show'); return; }
 
   const guessed = new Set(S.rows.filter((r) => r.kind !== 'skip').map((r) => norm(r.text)));
+
+  if (mode === 'insane') {
+    // No dropdown, ever — the only way in is typing the title closely enough
+    // to match exactly (case, punctuation and spacing aside). acList stays
+    // empty so a stray ArrowUp/Down or Enter from the shared keydown handler
+    // has nothing to act on.
+    el.ac.classList.remove('show');
+    const t = titles.find((x) => x.key === q && !guessed.has(x.key));
+    if (t) { chosen = t; el.submitBtn.disabled = false; }
+    return;
+  }
+
   acList = titles.filter((t) => t.searchKey.includes(q) && !guessed.has(t.key))
     .sort((a, b) => a.searchKey.indexOf(q) - b.searchKey.indexOf(q) || a.key.localeCompare(b.key))
     .slice(0, 40);
@@ -396,7 +445,7 @@ function submit() {
   stopClip();
 
   if (right) finish(true);
-  else if (S.rows.length >= STEPS.length) finish(false);
+  else if (S.rows.length >= S.cfg.steps.length) finish(false);
   else { render(); saveDaily(); pushProgress(); setTimeout(playClip, 220); }
 }
 
@@ -404,7 +453,7 @@ function skip() {
   if (!S || S.done) return;
   S.rows.push({ kind: 'skip', text: 'Skipped' });
   stopClip();
-  if (S.rows.length >= STEPS.length) finish(false);
+  if (S.rows.length >= S.cfg.steps.length) finish(false);
   else { render(); saveDaily(); pushProgress(); setTimeout(playClip, 220); }
 }
 
@@ -501,8 +550,8 @@ function drawBoard() {
 
 function shareText() {
   const squares = S.rows.map((r) => r.kind === 'right' ? '🟩' : r.kind === 'skip' ? '⬜' : '🟥').join('');
-  const pad = '⬛'.repeat(Math.max(0, STEPS.length - S.rows.length));
-  const label = mode === 'daily' ? 'lukeless #' + dayNumber() : 'lukeless (endless)';
+  const pad = '⬛'.repeat(Math.max(0, S.cfg.steps.length - S.rows.length));
+  const label = mode === 'daily' ? 'lukeless #' + dayNumber() : 'lukeless (' + mode + ')';
   return label + ' · ' + (S.won ? secsOf(S) + 's' : 'X') + (S.hint ? ' *' : '') +
     '\n' + squares + pad + '\n' + scoreOf(S) + ' pts · aidiotic.github.io/lukeless';
 }
@@ -521,7 +570,7 @@ function fullReport() {
     L.push('  ' + (S.won ? 'solved at ' + secsOf(S) + 's in ' + S.rows.length +
       (S.rows.length === 1 ? ' try' : ' tries') : 'not solved') + (S.hint ? ' (hint used, *)' : ''));
     L.push('  ' + S.rows.map((r) => r.kind === 'right' ? '🟩' : r.kind === 'skip' ? '⬜' : '🟥').join('') +
-      '⬛'.repeat(Math.max(0, STEPS.length - S.rows.length)));
+      '⬛'.repeat(Math.max(0, S.cfg.steps.length - S.rows.length)));
   }
   if (board.length) {
     L.push('', 'Top runs:');
@@ -702,7 +751,7 @@ function startClock() {
       clearInterval(clockTimer);
       if (S && !S.done) {
         // Out of time counts as a loss for the round, not a disconnect.
-        while (S.rows.length < STEPS.length) S.rows.push({ kind: 'skip', text: 'Skipped' });
+        while (S.rows.length < S.cfg.steps.length) S.rows.push({ kind: 'skip', text: 'Skipped' });
         stopClip();
         finish(false);
       }
@@ -819,7 +868,7 @@ function drawScoreboard() {
   const round = match.mine[match.round];
   el.meSub.textContent = round
     ? (round.won ? 'solved at ' + round.secs + 's · +' + round.pts : 'missed')
-    : S && !S.done ? (STEPS.length - S.rows.length) + ' tries left' : ' ';
+    : S && !S.done ? (S.cfg.steps.length - S.rows.length) + ' tries left' : ' ';
 
   const tr = match.theirs[match.round];
   el.themSub.textContent = tr
@@ -831,7 +880,7 @@ function drawScoreboard() {
   el.themPips.innerHTML = pips(match.live?.marks ?? []);
 }
 
-const pips = (marks) => Array.from({ length: STEPS.length },
+const pips = (marks) => Array.from({ length: NORMAL_CFG.steps.length },
   (_, i) => '<span class="pip ' + (marks[i] ?? '') + '"></span>').join('');
 
 function endMatch(why) {
@@ -862,7 +911,7 @@ function setMode(next) {
   clearInterval(clockTimer);
   stopClip();
 
-  for (const [id, m] of [['modeDaily', 'daily'], ['modeEndless', 'endless'], ['modeVersus', 'versus']]) {
+  for (const [id, m] of [['modeDaily', 'daily'], ['modeEndless', 'endless'], ['modeInsane', 'insane'], ['modeVersus', 'versus']]) {
     el[id].setAttribute('aria-pressed', String(mode === m));
   }
 
@@ -878,6 +927,8 @@ function setMode(next) {
   el.game.hidden = false;
   el.scoreboard.hidden = true;
   el.roundBar.hidden = true;
+  el.guess.placeholder = mode === 'insane'
+    ? 'Type the exact title — no suggestions…' : 'Search by title or artist…';
 
   if (mode === 'daily') {
     const saved = LS.get('daily', null);
@@ -885,6 +936,8 @@ function setMode(next) {
     const usable = saved && saved.day === dayNumber() && saved.pack === packId && saved.idx === idx;
     beginRound(idx, usable ? saved : null);
     if (S.done) showResult(S.won ? 'Solved today.' : 'Today got away.');
+  } else if (mode === 'insane') {
+    beginRound(pickInsaneSong(), null, INSANE_CFG);
   } else {
     beginRound(pickEndlessSong());
   }
@@ -908,6 +961,10 @@ el.guess.addEventListener('input', updateAC);
 el.guess.addEventListener('focus', () => { if (el.guess.value) updateAC(); });
 
 el.guess.addEventListener('keydown', (e) => {
+  // Arrow-key navigation only means anything when a dropdown is showing —
+  // in Insane there never is one, and markSel() disabling submit based on an
+  // always-empty acList would otherwise silently kill a valid typed match.
+  if (mode === 'insane') { if (e.key === 'Enter') { e.preventDefault(); submit(); } return; }
   if (e.key === 'ArrowDown') { e.preventDefault(); acSel = Math.min(acSel + 1, acList.length - 1); markSel(); }
   else if (e.key === 'ArrowUp') { e.preventDefault(); acSel = Math.max(acSel - 1, 0); markSel(); }
   else if (e.key === 'Enter') {
@@ -931,6 +988,7 @@ document.addEventListener('keydown', (e) => {
 
 el.modeDaily.addEventListener('click', () => setMode('daily'));
 el.modeEndless.addEventListener('click', () => setMode('endless'));
+el.modeInsane.addEventListener('click', () => setMode('insane'));
 el.modeVersus.addEventListener('click', () => setMode('versus'));
 
 el.packs.addEventListener('click', (e) => {
@@ -947,7 +1005,11 @@ el.packs.addEventListener('click', (e) => {
 });
 
 el.nextBtn.addEventListener('click', () => {
-  if (mode !== 'versus') { setMode('endless'); return; }
+  // Stay in whichever of Endless/Insane you're already in — this used to
+  // always jump to Endless, which meant finishing an Insane round and
+  // hitting "Next song" silently dropped you back into normal mode.
+  if (mode === 'endless' || mode === 'insane') { setMode(mode); return; }
+  if (mode !== 'versus') return;
   if (match?.phase === 'matchOver') { endMatch(); return; }
   readyUp();
 });

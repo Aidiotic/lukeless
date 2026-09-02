@@ -22,6 +22,7 @@
   <div class="pills" id="modes">
     <button class="pill" id="modeDaily" aria-pressed="true">Daily</button>
     <button class="pill" id="modeEndless" aria-pressed="false">Endless</button>
+    <button class="pill" id="modeInsane" aria-pressed="false">Insane</button>
     <button class="pill" id="modeVersus" aria-pressed="false">1v1</button>
   </div>
 
@@ -153,11 +154,15 @@
     <li>Six tries. A wrong guess or a skip unlocks the next length.</li>
     <li>Solving faster scores more: <b>100 / 80 / 60 / 45 / 30 / 20</b> points.</li>
     <li><b>Reveal first word</b> costs 25 points and tags the win with <span class="cheat">*</span>.
-        Solo only — it is not offered in 1v1.</li>
+        Solo only — not offered in 1v1 or Insane.</li>
   </ol>
   <p><b>Daily</b> gives everyone the same song, changing at midnight. <b>Endless</b> is
      random, forever. <b>1v1</b> puts you against a friend over six songs — you both
      race the same clip, and the round goes to whoever needs fewer seconds.</p>
+  <p><b>Insane</b>: clips start at a tenth of a second — <b>0.1s → 0.5s → 0.7s → 1s → 1.5s</b>,
+     five tries instead of six, worth more per try (<b>200 / 150 / 110 / 80 / 50</b>).
+     No autocomplete — you type the title yourself, exactly, with nothing suggested.
+     It also leans hard on lofi cuts where the catalogue has them.</p>
   <p>Clips come from Apple's previews, so they usually start at the hook rather than
      the first note. Consider it a feature.</p>
   <p>1v1 runs directly between the two browsers, with no server keeping score. That
