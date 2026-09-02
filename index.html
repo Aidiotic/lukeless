@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="system">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>lukeless — name the song from a one-second clip</title>
+<meta name="description" content="Guess the song from lukebox's playlist in as few seconds as you can. Solo, or 1v1 against a friend.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="toolbar">
+      <button class="icon-btn" id="howBtn" title="How to play" aria-label="How to play">?</button>
+      <button class="icon-btn" id="boardBtn" title="Leaderboard" aria-label="Leaderboard">★</button>
+      <button class="icon-btn" id="statsBtn" title="Statistics" aria-label="Statistics">▦</button>
+    </div>
+    <h1 class="brand">lukeless</h1>
+    <div class="tagline">Name the song in as few seconds as you can.</div>
+  </header>
+
+  <div class="pills" id="modes">
+    <button class="pill" id="modeDaily" aria-pressed="true">Daily</button>
+    <button class="pill" id="modeEndless" aria-pressed="false">Endless</button>
+    <button class="pill" id="modeVersus" aria-pressed="false">1v1</button>
+  </div>
+
+  <div class="pills" id="packs"></div>
+
+  <!-- ── the lobby: only up in 1v1, before a match is running ── -->
+  <div class="card vs-lobby" id="lobby">
+    <h2 id="lobbyTitle">Play someone</h2>
+    <p id="lobbyText">One of you opens a match and reads out the code. Six songs, same
+      six for both of you, fastest correct guess takes the round.</p>
+
+    <div class="field">
+      <label for="vsName">Your name</label>
+      <input type="text" id="vsName" maxlength="16" placeholder="Player 2" autocomplete="off">
+    </div>
+
+    <div id="lobbyPick">
+      <div class="actions">
+        <button class="btn primary" id="openBtn">Open a match</button>
+      </div>
+      <div class="field" style="margin-top:14px">
+        <label for="joinCode">…or join one</label>
+        <input type="text" id="joinCode" placeholder="CODE" autocomplete="off"
+               autocapitalize="characters" spellcheck="false" maxlength="5">
+      </div>
+      <div class="actions">
+        <button class="btn" id="joinBtn" disabled>Join</button>
+      </div>
+    </div>
+
+    <div id="lobbyWait" hidden>
+      <div class="field">
+        <label>Match code</label>
+        <div class="code" id="codeOut">—</div>
+      </div>
+      <div class="actions">
+        <button class="btn primary" id="copyLinkBtn">Copy invite link</button>
+        <button class="btn" id="cancelBtn">Cancel</button>
+      </div>
+    </div>
+
+    <div class="conn" id="conn"></div>
+  </div>
+
+  <!-- ── the game ── -->
+  <div class="card" id="game">
+    <div class="scoreboard" id="scoreboard" hidden>
+      <div class="side" id="sideMe">
+        <div class="name" id="meName">You</div>
+        <div class="pts" id="mePts">0</div>
+        <div class="sub" id="meSub">&nbsp;</div>
+        <div class="pips" id="mePips"></div>
+      </div>
+      <div class="vs-mid">vs</div>
+      <div class="side" id="sideThem">
+        <div class="name" id="themName">Opponent</div>
+        <div class="pts" id="themPts">0</div>
+        <div class="sub" id="themSub">&nbsp;</div>
+        <div class="pips" id="themPips"></div>
+      </div>
+    </div>
+
+    <div class="round-bar" id="roundBar" hidden>
+      <span id="roundLabel">Round 1 of 6</span>
+      <span class="clock" id="clock">1:30</span>
+    </div>
+
+    <div class="guesses" id="guesses"></div>
+
+    <div class="player">
+      <div class="track"><div class="unlocked" id="unlocked"></div><div class="played" id="played"></div></div>
+      <div class="ticks" id="ticks"></div>
+      <div class="controls">
+        <button class="play" id="playBtn" aria-label="Play clip">▶</button>
+        <div class="time" id="time">0.0 / 1.0s</div>
+        <div class="vol" id="vol">
+          <button class="vol-btn" id="volBtn" title="Mute" aria-label="Mute">🔊</button>
+          <input type="range" id="volRange" min="0" max="100" value="80" aria-label="Volume">
+        </div>
+        <div class="status" id="status">Clip unlocks as you guess</div>
+      </div>
+    </div>
+
+    <div id="gameArea">
+      <div class="searchbox">
+        <div class="ac" id="ac"></div>
+        <input type="text" id="guess" placeholder="Search the playlist…" autocomplete="off"
+               autocorrect="off" autocapitalize="off" spellcheck="false">
+      </div>
+      <div class="hintbar">
+        <button class="hint-btn" id="hintBtn">Reveal first word</button>
+        <div class="hint-word" id="hintWord" hidden></div>
+      </div>
+      <div class="actions">
+        <button class="btn" id="skipBtn">Skip (+1s)</button>
+        <button class="btn primary" id="submitBtn" disabled>Submit</button>
+      </div>
+    </div>
+
+    <div class="result" id="result">
+      <p class="verdict" id="verdict"></p>
+      <img class="art" id="art" alt="" width="150" height="150">
+      <h2 class="song-title" id="rTitle"></h2>
+      <div class="song-meta" id="rMeta"></div>
+      <audio class="full-player" id="fullAudio" controls preload="none"></audio>
+      <div class="actions">
+        <button class="btn primary" id="shareBtn">Share result</button>
+        <button class="btn" id="nextBtn">Next song</button>
+      </div>
+      <div class="actions" id="reportRow">
+        <button class="btn" id="claudeBtn" style="flex:1">Copy full report</button>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    30-second preview clips from the public iTunes catalogue. Unofficial fan project —
+    all music belongs to its artists. A companion to
+    <a href="https://aidiotic.github.io/lukebox/">lukebox</a>.
+  </footer>
+</div>
+
+<dialog id="howDlg">
+  <h2>How to play</h2>
+  <p>You get <b>one second</b> of a song from the playlist. Name it, or skip — either
+     way the clip grows.</p>
+  <ol>
+    <li>Clip lengths: <b>1s → 2s → 4s → 7s → 11s → 16s</b></li>
+    <li>Six tries. A wrong guess or a skip unlocks the next length.</li>
+    <li>Solving faster scores more: <b>100 / 80 / 60 / 45 / 30 / 20</b> points.</li>
+    <li><b>Reveal first word</b> costs 25 points and tags the win with <span class="cheat">*</span>.</li>
+  </ol>
+  <p><b>Daily</b> gives everyone the same song, changing at midnight. <b>Endless</b> is
+     random, forever. <b>1v1</b> puts you against a friend over six songs — you both
+     race the same clip, and the round goes to whoever needs fewer seconds.</p>
+  <p>Clips come from Apple's previews, so they usually start at the hook rather than
+     the first note. Consider it a feature.</p>
+  <p>1v1 runs directly between the two browsers, with no server keeping score. That
+     also means both players' browsers hold the answers — it is a game between people
+     who are not trying to cheat.</p>
+  <button class="btn close" onclick="howDlg.close()">Got it</button>
+</dialog>
+
+<dialog id="statsDlg">
+  <h2>Statistics</h2>
+  <div class="stats">
+    <div class="stat"><b id="sPlayed">0</b><span>Played</span></div>
+    <div class="stat"><b id="sWin">0%</b><span>Win rate</span></div>
+    <div class="stat"><b id="sStreak">0</b><span>Streak</span></div>
+    <div class="stat"><b id="sMax">0</b><span>Best</span></div>
+  </div>
+  <div class="dist" id="dist"></div>
+  <div class="stats" style="border-top:1px solid var(--rule);padding-top:14px">
+    <div class="stat"><b id="sVsPlayed">0</b><span>1v1 played</span></div>
+    <div class="stat"><b id="sVsWon">0</b><span>1v1 won</span></div>
+  </div>
+  <button class="btn close" onclick="statsDlg.close()">Close</button>
+</dialog>
+
+<dialog id="boardDlg">
+  <h2>Leaderboard</h2>
+  <div class="board" id="board"></div>
+  <div class="board-note" id="boardNote"></div>
+  <div class="actions">
+    <button class="btn primary" id="boardShareBtn">Copy full report</button>
+    <button class="btn" onclick="boardDlg.close()">Close</button>
+  </div>
+</dialog>
+
+<div class="toast" id="toast"></div>
+
+<script src="config.js"></script>
+<script src="songs.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.5/dist/peerjs.min.js"></script>
+<script type="module" src="src/app.js"></script>
+</body>
+</html>
