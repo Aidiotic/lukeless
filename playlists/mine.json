@@ -7,6 +7,13 @@
   "album": "El Dorado"
  },
  {
+  "title": "Youngblood",
+  "artists": [
+   "5 Seconds of Summer"
+  ],
+  "album": "Youngblood (Deluxe)"
+ },
+ {
   "title": "World's Smallest Violin",
   "artists": [
    "AJR"
@@ -49,6 +56,13 @@
   "album": "10000 Hours - Single"
  },
  {
+  "title": "Because I Got High",
+  "artists": [
+   "Afroman"
+  ],
+  "album": "The Good Times"
+ },
+ {
   "title": "The Spectre",
   "artists": [
    "Alan Walker"
@@ -77,6 +91,20 @@
   "album": "Ordinary - Single"
  },
  {
+  "title": "Best Day of My Life",
+  "artists": [
+   "American Authors"
+  ],
+  "album": "Oh, What a Life"
+ },
+ {
+  "title": "505",
+  "artists": [
+   "Arctic Monkeys"
+  ],
+  "album": "Favourite Worst Nightmare"
+ },
+ {
   "title": "Problem (feat. Iggy Azalea)",
   "artists": [
    "Ariana Grande"
@@ -89,6 +117,13 @@
    "Ariana Grande"
   ],
   "album": "My Everything (Bonus Tracks Edition)"
+ },
+ {
+  "title": "Tokyo",
+  "artists": [
+   "Ark Patrol"
+  ],
+  "album": "Ambition EP - Single"
  },
  {
   "title": "Let Go (feat. Veronika Redd)",
@@ -174,6 +209,20 @@
    "Bag Raiders"
   ],
   "album": "Shooting Stars - EP"
+ },
+ {
+  "title": "Happy Endings",
+  "artists": [
+   "Bcalm"
+  ],
+  "album": "For You"
+ },
+ {
+  "title": "01 Heaven Is A Place On Earth",
+  "artists": [
+   "Belinda Carlisle"
+  ],
+  "album": "Heaven On Earth (Deluxe Edition)"
  },
  {
   "title": "TEXAS HOLD 'EM (PONY UP) REMIX",
@@ -376,6 +425,14 @@
   "album": "Cry Baby (Extended) - Single"
  },
  {
+  "title": "Redetsky March",
+  "artists": [
+   "Coastal Communities Concert Band",
+   "Don Caneva"
+  ],
+  "album": "CCCB A Classical Gas 10-2-2005"
+ },
+ {
   "title": "Higher Power",
   "artists": [
    "Coldplay"
@@ -425,6 +482,13 @@
   "album": "20th Century Masters - The Millennium Collection_ The Best of Gloria Gaynor"
  },
  {
+  "title": "Lofsöngur (Þjóðsöngur Íslendinga)",
+  "artists": [
+   "Compilations"
+  ],
+  "album": "40 Songs of Iceland"
+ },
+ {
   "title": "Minecraft (from _A Minecraft Movie_)",
   "artists": [
    "Compilations"
@@ -460,6 +524,13 @@
   "album": "Classical Lines"
  },
  {
+  "title": "How Bad Can I Be_ (feat. The Lorax Singers)",
+  "artists": [
+   "Compilations"
+  ],
+  "album": "Dr. Seuss' The Lorax (Original Songs from the Motion Picture)"
+ },
+ {
   "title": "Let It Grow (feat. Jenny Slate, Betty White & Rob Riggle)",
   "artists": [
    "Compilations"
@@ -472,6 +543,13 @@
    "Compilations"
   ],
   "album": "Fifty Shades of Grey (Original Motion Picture Soundtrack)"
+ },
+ {
+  "title": "See You Again (feat. Charlie Puth)",
+  "artists": [
+   "Compilations"
+  ],
+  "album": "Furious 7 (Original Motion Picture Soundtrack)"
  },
  {
   "title": "Manic Monday",
@@ -530,11 +608,53 @@
   "album": "It's a Sunshine Day_ The Best of the Brady Bunch"
  },
  {
+  "title": "Hava Nagila",
+  "artists": [
+   "Compilations"
+  ],
+  "album": "Jewish Songs (The Best of Yiddish Songs and Klezmer Music)"
+ },
+ {
+  "title": "03 Careless Whisper",
+  "artists": [
+   "Compilations"
+  ],
+  "album": "Ladies & Gentlemen"
+ },
+ {
   "title": "I Shot The Sheriff",
   "artists": [
    "Compilations"
   ],
   "album": "Legend – The Best Of Bob Marley & The Wailers"
+ },
+ {
+  "title": "04 Three Little Birds",
+  "artists": [
+   "Compilations"
+  ],
+  "album": "Legend_ The Best of Bob Marley and the Wailers (Deluxe Edition)"
+ },
+ {
+  "title": "Just the Two of Us (feat. Bill Withers)",
+  "artists": [
+   "Compilations"
+  ],
+  "album": "Love Songs"
+ },
+ {
+  "title": "Mayonaka No Door ~Stay with Me",
+  "artists": [
+   "Compilations"
+  ],
+  "album": "Miki Matsubara Best Collection"
+ },
+ {
+  "title": "Moskau",
+  "artists": [
+   "Compilations"
+  ],
+  "album": "Moskau - Das neue Best Of Album"
  },
  {
   "title": "Head & Heart (feat. MNEK)",
@@ -551,11 +671,32 @@
   "album": "Nothing But the Best (Remastered)"
  },
  {
+  "title": "My Way",
+  "artists": [
+   "Compilations"
+  ],
+  "album": "Nothing But the Best (Remastered)"
+ },
+ {
   "title": "Shake Your Love",
   "artists": [
    "Compilations"
   ],
   "album": "Out of the Blue"
+ },
+ {
+  "title": "Coffee in Paris",
+  "artists": [
+   "Compilations"
+  ],
+  "album": "Parisian Romance"
+ },
+ {
+  "title": "Waltz In Paris",
+  "artists": [
+   "Compilations"
+  ],
+  "album": "Parisian Romance"
  },
  {
   "title": "Abracadabra",
@@ -565,11 +706,25 @@
   "album": "Retro Halloween Aesthetic"
  },
  {
+  "title": "I'm Just a Bill",
+  "artists": [
+   "Compilations"
+  ],
+  "album": "Schoolhouse Rock! Rocks"
+ },
+ {
   "title": "What Makes You Beautiful",
   "artists": [
    "Compilations"
   ],
   "album": "Simping Songs"
+ },
+ {
+  "title": "Morning Mood",
+  "artists": [
+   "Compilations"
+  ],
+  "album": "Sleep Music"
  },
  {
   "title": "House of Memories",
@@ -579,11 +734,39 @@
   "album": "Some Pop Music"
  },
  {
+  "title": "06 Holding On",
+  "artists": [
+   "Compilations"
+  ],
+  "album": "Somewhere in Between"
+ },
+ {
   "title": "Sunflower (Spider-Man_ Into the Spider-Verse)",
   "artists": [
    "Compilations"
   ],
   "album": "Spider-Man_ Into the Spider-Verse (Soundtrack From & Inspired by the Motion Picture)"
+ },
+ {
+  "title": "Turkish March (Mozart)",
+  "artists": [
+   "Compilations"
+  ],
+  "album": "The Classic 70"
+ },
+ {
+  "title": "10 We Didn't Start the Fire",
+  "artists": [
+   "Compilations"
+  ],
+  "album": "The Essential Billy Joel"
+ },
+ {
+  "title": "09 Rasputin",
+  "artists": [
+   "Compilations"
+  ],
+  "album": "The Essential Boney M_"
  },
  {
   "title": "I Ain't Worried",
@@ -649,11 +832,46 @@
   "album": "The Real Slime Shady (Minecraft Slime Rap Song) - Single"
  },
  {
+  "title": "Do You Want To Build a Snowman_",
+  "artists": [
+   "Daniel Jang"
+  ],
+  "album": "Violin Covers Pt. II"
+ },
+ {
+  "title": "Rather Be",
+  "artists": [
+   "Daniel Jang"
+  ],
+  "album": "Violin Covers Pt. II"
+ },
+ {
+  "title": "Blank Space",
+  "artists": [
+   "Daniel Jang"
+  ],
+  "album": "Violin Covers Pt. III"
+ },
+ {
+  "title": "See You Again",
+  "artists": [
+   "Daniel Jang"
+  ],
+  "album": "Violin Covers Pt. III"
+ },
+ {
   "title": "Titanium (feat. Sia)",
   "artists": [
    "David Guetta"
   ],
   "album": "Nothing But the Beat"
+ },
+ {
+  "title": "Say My Name",
+  "artists": [
+   "David Guetta"
+  ],
+  "album": "Sunset - EP"
  },
  {
   "title": "10 Come On Eileen (As It Should Have Sounded 2022)",
@@ -662,6 +880,13 @@
    "Kevin Rowland"
   ],
   "album": "Too-Rye-Ay (As It Should Have Sounded 2022)"
+ },
+ {
+  "title": "Floating Island",
+  "artists": [
+   "Dimension 32"
+  ],
+  "album": "Aeolia"
  },
  {
   "title": "Babydoll",
@@ -706,6 +931,13 @@
   "album": "Future Nostalgia"
  },
  {
+  "title": "We're Good",
+  "artists": [
+   "Dua Lipa"
+  ],
+  "album": "Future Nostalgia (The Moonlight Edition)"
+ },
+ {
   "title": "Jiggle Jiggle",
   "artists": [
    "Duke",
@@ -720,6 +952,20 @@
    "Eagles"
   ],
   "album": "Hotel California"
+ },
+ {
+  "title": "Shivers",
+  "artists": [
+   "Ed Sheeran"
+  ],
+  "album": "="
+ },
+ {
+  "title": "Bad Habits",
+  "artists": [
+   "Ed Sheeran"
+  ],
+  "album": "Bad Habits - Single"
  },
  {
   "title": "Stereo Love",
@@ -830,6 +1076,13 @@
   "album": "Shine"
  },
  {
+  "title": "Bring Me to Life",
+  "artists": [
+   "Evanescence"
+  ],
+  "album": "Fallen"
+ },
+ {
   "title": "Cupid (Twin Version)",
   "artists": [
    "FIFTY FIFTY"
@@ -837,11 +1090,25 @@
   "album": "The Beginning_ Cupid - Single"
  },
  {
+  "title": "Mayonaka No Door (真夜中のドア)  Stay With Me",
+  "artists": [
+   "FUKUSHU BAND"
+  ],
+  "album": "Mayonaka No Door (真夜中のドア)  Stay With Me - Single"
+ },
+ {
   "title": "Pepas",
   "artists": [
    "Farruko"
   ],
   "album": "La 167"
+ },
+ {
+  "title": "Dansez",
+  "artists": [
+   "Fasion"
+  ],
+  "album": "Outbreak - EP"
  },
  {
   "title": "Glamorous (feat. Ludacris)",
@@ -856,6 +1123,13 @@
    "Fifth Harmony"
   ],
   "album": "7_27 (Deluxe)"
+ },
+ {
+  "title": "French National Anthem (Single)",
+  "artists": [
+   "French National Anthem"
+  ],
+  "album": "French National Anthem Singers (Single)"
  },
  {
   "title": "abcdefu",
@@ -891,6 +1165,13 @@
    "Green Day"
   ],
   "album": "American Idiot"
+ },
+ {
+  "title": "Stereo Hearts (feat. Adam Levine)",
+  "artists": [
+   "Gym Class Heroes"
+  ],
+  "album": "The Papercut Chronicles II"
  },
  {
   "title": "Day One (Interstellar Theme)",
@@ -1034,6 +1315,13 @@
   "album": "Vibras"
  },
  {
+  "title": "this is what falling in love feels like",
+  "artists": [
+   "JVKE"
+  ],
+  "album": "this is what ____ feels like (Vol. 1-4)"
+ },
+ {
   "title": "The Hanging Tree",
   "artists": [
    "James Newton Howard"
@@ -1056,6 +1344,13 @@
   "album": "Narwhals Are Awesome - Single"
  },
  {
+  "title": "Lucidity",
+  "artists": [
+   "Jellyraymen"
+  ],
+  "album": "Lucidity - Single"
+ },
+ {
   "title": "Rather Be (feat. Jess Glynne)",
   "artists": [
    "Jess Glynne"
@@ -1072,6 +1367,13 @@
   "album": "Bang Bang - Single"
  },
  {
+  "title": "The Risk",
+  "artists": [
+   "Joe Hisaishi"
+  ],
+  "album": "A Big Bold Beautiful Journey (Original Motion Picture Soundtrack)"
+ },
+ {
   "title": "The Village in May",
   "artists": [
    "Joe Hisaishi"
@@ -1084,6 +1386,20 @@
    "Joe Hisaishi"
   ],
   "album": "My Neighbor Totoro (Original Soundtrack)"
+ },
+ {
+  "title": "Take Me Home, Country Roads (Original Version)",
+  "artists": [
+   "John Denver"
+  ],
+  "album": "Poems, Prayers & Promises"
+ },
+ {
+  "title": "Glimpse of Us",
+  "artists": [
+   "Joji"
+  ],
+  "album": "Glimpse of Us - Single"
  },
  {
   "title": "Sucker",
@@ -1112,6 +1428,13 @@
    "Jung Jae Il"
   ],
   "album": "Squid Game 3 (Soundtrack from the Netflix Series)"
+ },
+ {
+  "title": "Telephone Number",
+  "artists": [
+   "Junko Ohashi"
+  ],
+  "album": "Magical Ohashi Junko No Sekai III"
  },
  {
   "title": "Baby (feat. Ludacris)",
@@ -1240,6 +1563,17 @@
   "album": "American Teen"
  },
  {
+  "title": "In Summer",
+  "artists": [
+   "Kristen Anderson-Lopez",
+   "Robert Lopez",
+   "Idina Menzel",
+   "Kristen Bell",
+   "Christophe Beck"
+  ],
+  "album": "Frozen (Original Motion Picture Soundtrack)"
+ },
+ {
   "title": "05 Let It Go",
   "artists": [
    "Kristen Anderson-Lopez",
@@ -1267,11 +1601,26 @@
   "album": "Layers"
  },
  {
+  "title": "Valentine",
+  "artists": [
+   "Kupla"
+  ],
+  "album": "Kingdom in Blue"
+ },
+ {
   "title": "Thunderclouds (feat. Sia, Diplo & Labrinth)",
   "artists": [
    "LSD"
   ],
   "album": "LABRINTH, SIA & DIPLO PRESENT... LSD"
+ },
+ {
+  "title": "Enchanted Horizons",
+  "artists": [
+   "LUQĘT",
+   "Strong.AL"
+  ],
+  "album": "Fragments of Changes"
  },
  {
   "title": "Bulletproof",
@@ -1318,11 +1667,697 @@
   "album": "IQ 21 (My Son So Dumb) - Single"
  },
  {
+  "title": "Clockwork",
+  "artists": [
+   "Laufey"
+  ],
+  "album": "A Matter Of Time"
+ },
+ {
+  "title": "Lover Girl",
+  "artists": [
+   "Laufey"
+  ],
+  "album": "A Matter Of Time"
+ },
+ {
+  "title": "Snow White",
+  "artists": [
+   "Laufey"
+  ],
+  "album": "A Matter Of Time"
+ },
+ {
+  "title": "Castle in Hollywood",
+  "artists": [
+   "Laufey"
+  ],
+  "album": "A Matter Of Time"
+ },
+ {
+  "title": "Carousel",
+  "artists": [
+   "Laufey"
+  ],
+  "album": "A Matter Of Time"
+ },
+ {
+  "title": "Silver Lining",
+  "artists": [
+   "Laufey"
+  ],
+  "album": "A Matter Of Time"
+ },
+ {
+  "title": "Too Little, Too Late",
+  "artists": [
+   "Laufey"
+  ],
+  "album": "A Matter Of Time"
+ },
+ {
+  "title": "Cuckoo Ballet (Interlude)",
+  "artists": [
+   "Laufey"
+  ],
+  "album": "A Matter Of Time"
+ },
+ {
+  "title": "Forget-Me-Not",
+  "artists": [
+   "Laufey"
+  ],
+  "album": "A Matter Of Time"
+ },
+ {
+  "title": "Tough Luck",
+  "artists": [
+   "Laufey"
+  ],
+  "album": "A Matter Of Time"
+ },
+ {
+  "title": "Mr. Eclectic",
+  "artists": [
+   "Laufey"
+  ],
+  "album": "A Matter Of Time"
+ },
+ {
+  "title": "Clean Air",
+  "artists": [
+   "Laufey"
+  ],
+  "album": "A Matter Of Time"
+ },
+ {
+  "title": "Sabotage",
+  "artists": [
+   "Laufey"
+  ],
+  "album": "A Matter Of Time"
+ },
+ {
+  "title": "Clockwork (Instrumental)",
+  "artists": [
+   "Laufey"
+  ],
+  "album": "A Matter of Time (Instrumental Edition)"
+ },
+ {
+  "title": "Lover Girl (Instrumental)",
+  "artists": [
+   "Laufey"
+  ],
+  "album": "A Matter of Time (Instrumental Edition)"
+ },
+ {
+  "title": "Snow White (Instrumental)",
+  "artists": [
+   "Laufey"
+  ],
+  "album": "A Matter of Time (Instrumental Edition)"
+ },
+ {
+  "title": "Castle in Hollywood (Instrumental)",
+  "artists": [
+   "Laufey"
+  ],
+  "album": "A Matter of Time (Instrumental Edition)"
+ },
+ {
+  "title": "Too Little, Too Late (Instrumental)",
+  "artists": [
+   "Laufey"
+  ],
+  "album": "A Matter of Time (Instrumental Edition)"
+ },
+ {
+  "title": "A Cautionary Tale",
+  "artists": [
+   "Laufey"
+  ],
+  "album": "A Matter of Time (Standard Edition)"
+ },
+ {
+  "title": "Seems Like Old Times (Bonus Track)",
+  "artists": [
+   "Laufey"
+  ],
+  "album": "A Matter of Time (Standard Edition)"
+ },
+ {
+  "title": "Madwoman",
+  "artists": [
+   "Laufey"
+  ],
+  "album": "A Matter of Time_ The Final Hour"
+ },
+ {
+  "title": "How I Get",
+  "artists": [
+   "Laufey"
+  ],
+  "album": "A Matter of Time_ The Final Hour"
+ },
+ {
+  "title": "I Wait, I Wait, I Wait",
+  "artists": [
+   "Laufey"
+  ],
+  "album": "A Matter of Time_ The Final Hour"
+ },
+ {
+  "title": "I'll Forget About You (In Time)",
+  "artists": [
+   "Laufey"
+  ],
+  "album": "A Matter of Time_ The Final Hour"
+ },
+ {
+  "title": "Clean Air (Instrumental)",
+  "artists": [
+   "Laufey"
+  ],
+  "album": "A Matter of Time_ The Final Hour (Instrumental Edition)"
+ },
+ {
+  "title": "Madwoman (Instrumental)",
+  "artists": [
+   "Laufey"
+  ],
+  "album": "A Matter of Time_ The Final Hour (Instrumental Edition)"
+ },
+ {
   "title": "Santa Baby",
   "artists": [
    "Laufey"
   ],
+  "album": "A Very Laufey Holiday_ The Santa Baby Edition - EP"
+ },
+ {
+  "title": "Winter Wonderland",
+  "artists": [
+   "Laufey"
+  ],
+  "album": "A Very Laufey Holiday_ The Santa Baby Edition - EP"
+ },
+ {
+  "title": "Christmas Dreaming",
+  "artists": [
+   "Laufey"
+  ],
+  "album": "A Very Laufey Holiday_ The Santa Baby Edition - EP"
+ },
+ {
+  "title": "Santa Claus Is Comin' To Town",
+  "artists": [
+   "Laufey"
+  ],
   "album": "A Very Laufey Holiday_ The Santa Claus Is Comin' To Town Edition"
+ },
+ {
+  "title": "Love to Keep Me Warm",
+  "artists": [
+   "Laufey"
+  ],
+  "album": "A Very Laufey Holiday_ The Santa Claus Is Comin' To Town Edition"
+ },
+ {
+  "title": "Dreamer",
+  "artists": [
+   "Laufey"
+  ],
+  "album": "Bewitched"
+ },
+ {
+  "title": "Second Best",
+  "artists": [
+   "Laufey"
+  ],
+  "album": "Bewitched"
+ },
+ {
+  "title": "Haunted",
+  "artists": [
+   "Laufey"
+  ],
+  "album": "Bewitched"
+ },
+ {
+  "title": "Must Be Love",
+  "artists": [
+   "Laufey"
+  ],
+  "album": "Bewitched"
+ },
+ {
+  "title": "While You Were Sleeping",
+  "artists": [
+   "Laufey"
+  ],
+  "album": "Bewitched"
+ },
+ {
+  "title": "Lovesick",
+  "artists": [
+   "Laufey"
+  ],
+  "album": "Bewitched"
+ },
+ {
+  "title": "California and Me (feat. Philharmonia Orchestra)",
+  "artists": [
+   "Laufey"
+  ],
+  "album": "Bewitched"
+ },
+ {
+  "title": "Nocturne (Interlude)",
+  "artists": [
+   "Laufey"
+  ],
+  "album": "Bewitched"
+ },
+ {
+  "title": "Promise",
+  "artists": [
+   "Laufey"
+  ],
+  "album": "Bewitched"
+ },
+ {
+  "title": "Misty",
+  "artists": [
+   "Laufey"
+  ],
+  "album": "Bewitched"
+ },
+ {
+  "title": "Serendipity",
+  "artists": [
+   "Laufey"
+  ],
+  "album": "Bewitched"
+ },
+ {
+  "title": "Letter To My 13 Year Old Self",
+  "artists": [
+   "Laufey"
+  ],
+  "album": "Bewitched"
+ },
+ {
+  "title": "Bewitched",
+  "artists": [
+   "Laufey"
+  ],
+  "album": "Bewitched"
+ },
+ {
+  "title": "Bored",
+  "artists": [
+   "Laufey"
+  ],
+  "album": "Bewitched_ The Goddess Edition"
+ },
+ {
+  "title": "Trouble",
+  "artists": [
+   "Laufey"
+  ],
+  "album": "Bewitched_ The Goddess Edition"
+ },
+ {
+  "title": "It Could Happen To You",
+  "artists": [
+   "Laufey"
+  ],
+  "album": "Bewitched_ The Goddess Edition"
+ },
+ {
+  "title": "Goddess",
+  "artists": [
+   "Laufey"
+  ],
+  "album": "Bewitched_ The Goddess Edition"
+ },
+ {
+  "title": "Letter To My 13 Year Old Self (Instrumental)",
+  "artists": [
+   "Laufey"
+  ],
+  "album": "Bewitched_ The Goddess Edition (Instrumentals)"
+ },
+ {
+  "title": "Confess Your Love (feat. ola.wav) [Jiandro Remix]",
+  "artists": [
+   "Laufey"
+  ],
+  "album": "Confess Your Love (Jiandro Remix) [feat. ola.wav] - Single"
+ },
+ {
+  "title": "Beautiful Stranger",
+  "artists": [
+   "Laufey"
+  ],
+  "album": "Everything I Know About Love"
+ },
+ {
+  "title": "Just Like Chet",
+  "artists": [
+   "Laufey"
+  ],
+  "album": "Everything I Know About Love"
+ },
+ {
+  "title": "Falling Behind",
+  "artists": [
+   "Laufey"
+  ],
+  "album": "Everything I Know About Love"
+ },
+ {
+  "title": "Night Light",
+  "artists": [
+   "Laufey"
+  ],
+  "album": "Everything I Know About Love"
+ },
+ {
+  "title": "Fragile",
+  "artists": [
+   "Laufey"
+  ],
+  "album": "Everything I Know About Love (Deluxe Edition)"
+ },
+ {
+  "title": "Above the Chinese Restaurant",
+  "artists": [
+   "Laufey"
+  ],
+  "album": "Everything I Know About Love (Deluxe Edition)"
+ },
+ {
+  "title": "Dear Soulmate",
+  "artists": [
+   "Laufey"
+  ],
+  "album": "Everything I Know About Love (Deluxe Edition)"
+ },
+ {
+  "title": "What Love Will Do to You",
+  "artists": [
+   "Laufey"
+  ],
+  "album": "Everything I Know About Love (Deluxe Edition)"
+ },
+ {
+  "title": "I've Never Been In Love Before",
+  "artists": [
+   "Laufey"
+  ],
+  "album": "Everything I Know About Love (Deluxe Edition)"
+ },
+ {
+  "title": "Everything I Know About Love",
+  "artists": [
+   "Laufey"
+  ],
+  "album": "Everything I Know About Love (Deluxe Edition)"
+ },
+ {
+  "title": "Hi",
+  "artists": [
+   "Laufey"
+  ],
+  "album": "Everything I Know About Love (Deluxe Edition)"
+ },
+ {
+  "title": "Dance With You Tonight",
+  "artists": [
+   "Laufey"
+  ],
+  "album": "Everything I Know About Love (Deluxe Edition)"
+ },
+ {
+  "title": "Slow Down",
+  "artists": [
+   "Laufey"
+  ],
+  "album": "Everything I Know About Love (Deluxe Edition)"
+ },
+ {
+  "title": "Lucky for Me",
+  "artists": [
+   "Laufey"
+  ],
+  "album": "Everything I Know About Love (Deluxe Edition)"
+ },
+ {
+  "title": "Questions For the Universe",
+  "artists": [
+   "Laufey"
+  ],
+  "album": "Everything I Know About Love (Deluxe Edition)"
+ },
+ {
+  "title": "From The Start (Sped Up)",
+  "artists": [
+   "Laufey"
+  ],
+  "album": "From The Start (Sped Up) - Single"
+ },
+ {
+  "title": "From The Start",
+  "artists": [
+   "Laufey"
+  ],
+  "album": "From The Start - Single"
+ },
+ {
+  "title": "From The Start X Hoodtrap",
+  "artists": [
+   "Laufey"
+  ],
+  "album": "From The Start X Hoodtrap - Single"
+ },
+ {
+  "title": "From The Start (Lofi Version)",
+  "artists": [
+   "Laufey"
+  ],
+  "album": "Laufey Lofi Collection - EP"
+ },
+ {
+  "title": "Falling Behind (Lofi Version)",
+  "artists": [
+   "Laufey"
+  ],
+  "album": "Laufey Lofi Collection - EP"
+ },
+ {
+  "title": "I Wish You Love (Lofi Version)",
+  "artists": [
+   "Laufey"
+  ],
+  "album": "Laufey Lofi Collection - EP"
+ },
+ {
+  "title": "Valentine (Lofi Version)",
+  "artists": [
+   "Laufey"
+  ],
+  "album": "Laufey Lofi Collection - EP"
+ },
+ {
+  "title": "Let You Break My Heart Again (Live)",
+  "artists": [
+   "Laufey"
+  ],
+  "album": "The Reykjavík Sessions - EP"
+ },
+ {
+  "title": "Street by Street",
+  "artists": [
+   "Laufey"
+  ],
+  "album": "Typical of Me EP"
+ },
+ {
+  "title": "Magnolia",
+  "artists": [
+   "Laufey"
+  ],
+  "album": "Typical of Me EP"
+ },
+ {
+  "title": "Like the Movies",
+  "artists": [
+   "Laufey"
+  ],
+  "album": "Typical of Me EP"
+ },
+ {
+  "title": "I Wish You Love",
+  "artists": [
+   "Laufey"
+  ],
+  "album": "Typical of Me EP"
+ },
+ {
+  "title": "James",
+  "artists": [
+   "Laufey"
+  ],
+  "album": "Typical of Me EP"
+ },
+ {
+  "title": "Someone New",
+  "artists": [
+   "Laufey"
+  ],
+  "album": "Typical of Me EP"
+ },
+ {
+  "title": "Best Friend",
+  "artists": [
+   "Laufey"
+  ],
+  "album": "Typical of Me EP"
+ },
+ {
+  "title": "Valentine",
+  "artists": [
+   "Laufey"
+  ],
+  "album": "Valentine - Single"
+ },
+ {
+  "title": "Vertigo (Lover Girl Dxrkaii Remix)",
+  "artists": [
+   "Laufey"
+  ],
+  "album": "Vertigo (Lover Girl Dxrkaii Remix) - Single"
+ },
+ {
+  "title": "Where or When",
+  "artists": [
+   "Laufey"
+  ],
+  "album": "Where or When - Single"
+ },
+ {
+  "title": "Love Flew Away",
+  "artists": [
+   "Laufey",
+   "Adam Melchor"
+  ],
+  "album": "Love Flew Away - Single"
+ },
+ {
+  "title": "Fragile (Live at The Symphony)",
+  "artists": [
+   "Laufey",
+   "Iceland Symphony Orchestra"
+  ],
+  "album": "A Night At The Symphony"
+ },
+ {
+  "title": "Valentine (Live at The Symphony)",
+  "artists": [
+   "Laufey",
+   "Iceland Symphony Orchestra"
+  ],
+  "album": "A Night At The Symphony"
+ },
+ {
+  "title": "Dear Soulmate (Live at The Symphony)",
+  "artists": [
+   "Laufey",
+   "Iceland Symphony Orchestra"
+  ],
+  "album": "A Night At The Symphony"
+ },
+ {
+  "title": "I Wish You Love (Live at The Symphony)",
+  "artists": [
+   "Laufey",
+   "Iceland Symphony Orchestra"
+  ],
+  "album": "A Night At The Symphony"
+ },
+ {
+  "title": "Ég Veit Þú Kemur (Live at The Symphony)",
+  "artists": [
+   "Laufey",
+   "Iceland Symphony Orchestra"
+  ],
+  "album": "A Night At The Symphony"
+ },
+ {
+  "title": "Let You Break My Heart Again (Live at The Symphony)",
+  "artists": [
+   "Laufey",
+   "Iceland Symphony Orchestra"
+  ],
+  "album": "A Night At The Symphony"
+ },
+ {
+  "title": "Beautiful Stranger (Live at The Symphony)",
+  "artists": [
+   "Laufey",
+   "Iceland Symphony Orchestra"
+  ],
+  "album": "A Night At The Symphony"
+ },
+ {
+  "title": "Falling Behind (Live at the Hollywood Bowl)",
+  "artists": [
+   "Laufey",
+   "Los Angeles Philharmonic"
+  ],
+  "album": "A Night At The Symphony_ Live at the Hollywood Bowl"
+ },
+ {
+  "title": "Goddess (Live at the Hollywood Bowl)",
+  "artists": [
+   "Laufey",
+   "Los Angeles Philharmonic"
+  ],
+  "album": "A Night At The Symphony_ Live at the Hollywood Bowl"
+ },
+ {
+  "title": "Lovesick (Live at the Hollywood Bowl)",
+  "artists": [
+   "Laufey",
+   "Los Angeles Philharmonic"
+  ],
+  "album": "A Night At The Symphony_ Live at the Hollywood Bowl"
+ },
+ {
+  "title": "Let You Break My Heart Again",
+  "artists": [
+   "Laufey",
+   "Philharmonia Orchestra"
+  ],
+  "album": "Let You Break My Heart Again - Single"
+ },
+ {
+  "title": "Bewitched (Rework)",
+  "artists": [
+   "Laufey",
+   "Víkingur Ólafsson"
+  ],
+  "album": "Bewitched (Rework) - Single"
+ },
+ {
+  "title": "Love To Keep Me Warm",
+  "artists": [
+   "Laufey",
+   "dodie"
+  ],
+  "album": "Love To Keep Me Warm - Single"
  },
  {
   "title": "Santa Baby",
@@ -1332,11 +2367,25 @@
   "album": "A Very Laufey Holiday_ The Santa Claus Is Comin' To Town Edition"
  },
  {
+  "title": "Chills",
+  "artists": [
+   "Lauren Rose"
+  ],
+  "album": "Chills - Single"
+ },
+ {
   "title": "The Lamp Is Low",
   "artists": [
    "Laurindo Almeida"
   ],
   "album": "Classical Current"
+ },
+ {
+  "title": "Tokyo",
+  "artists": [
+   "Leat'eq"
+  ],
+  "album": "Tokyo - Single"
  },
  {
   "title": "Don't Worry",
@@ -1365,6 +2414,13 @@
    "Leony"
   ],
   "album": "Oldschool Love"
+ },
+ {
+  "title": "Remedy",
+  "artists": [
+   "Leony"
+  ],
+  "album": "Remedy - Single"
  },
  {
   "title": "Blueberry Faygo",
@@ -1409,6 +2465,13 @@
   "album": "All Stand Together"
  },
  {
+  "title": "What a Wonderful World",
+  "artists": [
+   "Louis Armstrong"
+  ],
+  "album": "What a Wonderful World"
+ },
+ {
   "title": "7 Years",
   "artists": [
    "Lukas Graham"
@@ -1447,6 +2510,13 @@
   "album": "This Unruly Mess I've Made"
  },
  {
+  "title": "La Isla Bonita",
+  "artists": [
+   "Madonna"
+  ],
+  "album": "True Blue"
+ },
+ {
   "title": "Better Days",
   "artists": [
    "Mae Muller"
@@ -1459,6 +2529,20 @@
    "Magic System"
   ],
   "album": "Africainement vôtre"
+ },
+ {
+  "title": "Aria Math (feat. Landon Bassier) [Double Bass & Violin Cover]",
+  "artists": [
+   "Majestic Violin"
+  ],
+  "album": "Aria Math (feat. Landon Bassier) [Double Bass & Violin Cover] - Single"
+ },
+ {
+  "title": "Miguel Phonk (Violin)",
+  "artists": [
+   "Majestic Violin"
+  ],
+  "album": "Miguel Phonk (Violin) - Single"
  },
  {
   "title": "Lean On (feat. DJ Snake & MØ)",
@@ -1545,6 +2629,13 @@
   "album": "Be the Cowboy"
  },
  {
+  "title": "Lady (Hear Me Tonight)",
+  "artists": [
+   "Modjo"
+  ],
+  "album": "Modjo (Remastered)"
+ },
+ {
   "title": "Super Idol (热爱105°C的你)",
   "artists": [
    "Morpheus",
@@ -1565,6 +2656,13 @@
    "Mtsg"
   ],
   "album": "The Brits are coming (feat. grayto) - Single"
+ },
+ {
+  "title": "Wake Me Up Inside (Jersey Club)",
+  "artists": [
+   "Mvntana"
+  ],
+  "album": "Wake Me Up Inside (Jersey Club) - Single"
  },
  {
   "title": "Stargazing",
@@ -1659,6 +2757,27 @@
   "album": "SOUR (Video Version)"
  },
  {
+  "title": "drop dead",
+  "artists": [
+   "Olivia Rodrigo"
+  ],
+  "album": "you seem pretty sad for a girl so in love"
+ },
+ {
+  "title": "honeybee",
+  "artists": [
+   "Olivia Rodrigo"
+  ],
+  "album": "you seem pretty sad for a girl so in love"
+ },
+ {
+  "title": "my way",
+  "artists": [
+   "Olivia Rodrigo"
+  ],
+  "album": "you seem pretty sad for a girl so in love"
+ },
+ {
   "title": "Drag Me Down",
   "artists": [
    "One Direction"
@@ -1701,6 +2820,20 @@
   "album": "After Laughter"
  },
  {
+  "title": "All I Wanted",
+  "artists": [
+   "Paramore"
+  ],
+  "album": "Brand New Eyes (Deluxe Version)"
+ },
+ {
+  "title": "Ain't It Fun",
+  "artists": [
+   "Paramore"
+  ],
+  "album": "Paramore"
+ },
+ {
   "title": "Still Into You",
   "artists": [
    "Paramore"
@@ -1736,6 +2869,13 @@
   "album": "death bed (feat. beabadoobee) [coffee for your head] - Single"
  },
  {
+  "title": "Cigarette Duet",
+  "artists": [
+   "Princess Chelsea"
+  ],
+  "album": "Lil' Golden Book"
+ },
+ {
   "title": "Honey Boy (feat. Nile Rodgers & Shenseea)",
   "artists": [
    "Purple Disco Machine"
@@ -1743,11 +2883,25 @@
   "album": "Paradise"
  },
  {
+  "title": "Caramellow",
+  "artists": [
+   "Purrple Cat"
+  ],
+  "album": "Sweet Dreams - EP"
+ },
+ {
   "title": "Locked Away (feat. Adam Levine)",
   "artists": [
    "R. City"
   ],
   "album": "What Dreams Are Made Of"
+ },
+ {
+  "title": "The Longest Goodbye (feat. Laufey)",
+  "artists": [
+   "ROLE MODEL"
+  ],
+  "album": "The Longest Goodbye (feat. Laufey) - Single"
  },
  {
   "title": "APT.",
@@ -1763,6 +2917,13 @@
    "Ramones"
   ],
   "album": "Ramones (40th Anniversary Deluxe Edition)"
+ },
+ {
+  "title": "Californication",
+  "artists": [
+   "Red Hot Chili Peppers"
+  ],
+  "album": "Californication (Remastered)"
  },
  {
   "title": "Trap Queen (feat. caed)",
@@ -1787,6 +2948,13 @@
    "Selena Gomez"
   ],
   "album": "Calm Down - Single"
+ },
+ {
+  "title": "Caramelldansen (feat. Cristina Vee) [English Version]",
+  "artists": [
+   "RichaadEB"
+  ],
+  "album": "Caramelldansen (English Version) [feat. Cristina Vee] - Single"
  },
  {
   "title": "Never Gonna Give You Up (Pianoforte)",
@@ -1881,6 +3049,13 @@
   "album": "Short n' Sweet"
  },
  {
+  "title": "Slow Down",
+  "artists": [
+   "Selena Gomez"
+  ],
+  "album": "Stars Dance (Bonus Track Version)"
+ },
+ {
   "title": "A Bar Song (Tipsy)",
   "artists": [
    "Shaboozey"
@@ -1916,6 +3091,14 @@
   "album": "Illuminate (Deluxe)"
  },
  {
+  "title": "Señorita",
+  "artists": [
+   "Shawn Mendes",
+   "Camila Cabello"
+  ],
+  "album": "Señorita - Single"
+ },
+ {
   "title": "I Thought I Saw Your Face Today",
   "artists": [
    "She",
@@ -1936,6 +3119,20 @@
    "Shiina Mota"
   ],
   "album": "Alive"
+ },
+ {
+  "title": "Candy Cane Lane",
+  "artists": [
+   "Sia"
+  ],
+  "album": "Everyday Is Christmas (Deluxe)"
+ },
+ {
+  "title": "Snowman",
+  "artists": [
+   "Sia"
+  ],
+  "album": "Everyday Is Christmas (Deluxe)"
  },
  {
   "title": "Cheap Thrills",
@@ -1973,6 +3170,20 @@
   "album": "Bangarang"
  },
  {
+  "title": "Reasons for Being",
+  "artists": [
+   "Spencer Hunt"
+  ],
+  "album": "Hear Who I Am .._"
+ },
+ {
+  "title": "Willow Hill",
+  "artists": [
+   "Spencer Hunt"
+  ],
+  "album": "Windy City - EP"
+ },
+ {
   "title": "Wannabe",
   "artists": [
    "Spice Girls"
@@ -1985,6 +3196,13 @@
    "Static-P"
   ],
   "album": "It's Not Like I Like You!! - Single"
+ },
+ {
+  "title": "No One Knows",
+  "artists": [
+   "Stephen Sanchez"
+  ],
+  "album": "Angel Face"
  },
  {
   "title": "Cradles",
@@ -2032,11 +3250,25 @@
   "album": "Dracula (JENNIE Remix - Boys Noize Disko Version) - Single"
  },
  {
+  "title": "greedy (Ian Asher Remix)",
+  "artists": [
+   "Tate McRae"
+  ],
+  "album": "greedy (remixes) - EP"
+ },
+ {
   "title": "greedy",
   "artists": [
    "Tate McRae"
   ],
   "album": "greedy - Single"
+ },
+ {
+  "title": "she's all i wanna be",
+  "artists": [
+   "Tate McRae"
+  ],
+  "album": "she's all i wanna be - Single"
  },
  {
   "title": "Welcome To New York",
@@ -2100,6 +3332,13 @@
    "Taylor Swift"
   ],
   "album": "Red (Deluxe Edition)"
+ },
+ {
+  "title": "Everybody Wants to Rule the World",
+  "artists": [
+   "Tears for Fears"
+  ],
+  "album": "Songs from the Big Chair"
  },
  {
   "title": "Here Comes the Sun",
@@ -2232,6 +3471,20 @@
   "album": "Raymond v Raymond (Expanded Edition)"
  },
  {
+  "title": "Dancing In The Flames",
+  "artists": [
+   "VIOLIN COVERS"
+  ],
+  "album": "pop songs 2024"
+ },
+ {
+  "title": "we cant be friends",
+  "artists": [
+   "VIOLIN COVERS"
+  ],
+  "album": "pop songs 2024"
+ },
+ {
   "title": "Riptide",
   "artists": [
    "Vance Joy"
@@ -2258,6 +3511,20 @@
    "Walker Hayes"
   ],
   "album": "Country Stuff The Album"
+ },
+ {
+  "title": "Last Christmas (Single Version)",
+  "artists": [
+   "Wham!"
+  ],
+  "album": "Last Christmas - Single"
+ },
+ {
+  "title": "Bruh Moment",
+  "artists": [
+   "Yung Nugget"
+  ],
+  "album": "8 Piece Meal"
  },
  {
   "title": "From The Start - Silly Funk (feat. JiJi) [Jiji's Version]",
@@ -2299,6 +3566,28 @@
   "album": "aria math - EP"
  },
  {
+  "title": "A Night To Remember",
+  "artists": [
+   "beabadoobee",
+   "Laufey"
+  ],
+  "album": "A Night To Remember - Single"
+ },
+ {
+  "title": "Misery.",
+  "artists": [
+   "pupsies"
+  ],
+  "album": "Misery. - Single"
+ },
+ {
+  "title": "Last Sunset",
+  "artists": [
+   "tender spring"
+  ],
+  "album": "Springtime, With Friends"
+ },
+ {
   "title": "Stressed Out",
   "artists": [
    "twenty one pilots"
@@ -2306,11 +3595,25 @@
   "album": "Blurryface"
  },
  {
-  "title": "Ain't It Fun",
+  "title": "blue",
   "artists": [
-   "Paramore"
+   "yung kai"
   ],
-  "album": "Paramore"
+  "album": "blue - Single"
+ },
+ {
+  "title": "beach song",
+  "artists": [
+   "yung kai"
+  ],
+  "album": "stay with the ocean, i'll find you"
+ },
+ {
+  "title": "wildflower",
+  "artists": [
+   "yung kai"
+  ],
+  "album": "wildflower - Single"
  },
  {
   "title": "Perfect",
@@ -2326,12 +3629,5 @@
    "asumuh"
   ],
   "album": "stay with the ocean, i'll find you"
- },
- {
-  "title": "wildflower",
-  "artists": [
-   "yung kai"
-  ],
-  "album": "wildflower - Single"
  }
 ]

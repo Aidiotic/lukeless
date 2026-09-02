@@ -43,6 +43,10 @@ const stripDisc = (name) => name.replace(/^\d+[-\s]+/, '').trim();
 const tracks = [];
 const seen = new Set();
 
+/* Nothing is filtered on content. Instrumentals, remixes, edits and explicit
+   cuts all stay: they are songs in the library, and the library is the point.
+   The only things dropped are true duplicates — see the numbered-copy pass at
+   the bottom. */
 function add(title, artists, album) {
   if (!title || !artists.length) return;
   const key = title.toLowerCase() + '|' + artists.join().toLowerCase();
@@ -51,11 +55,18 @@ function add(title, artists, album) {
   tracks.push({ title, artists, album: album || null });
 }
 
+/* A downloaded track is stored one of two ways depending on when Music.app
+   fetched it: a single .m4p file, or a .movpkg *directory* holding fragmented
+   HLS. Both sit in the same artist/album folder, and a track can exist as both,
+   which `add` dedupes. Missing the directory form loses about a third of a
+   library, so match on the name and ignore whether it is a file. */
+const TRACK = /\.(m4p|m4a|mp3|movpkg)$/i;
+
 for (const artist of dirs(LIBRARY)) {
   for (const album of dirs(join(LIBRARY, artist))) {
-    for (const file of readdirSync(join(LIBRARY, artist, album))) {
-      if (!/\.(m4p|m4a|mp3)$/i.test(file)) continue;
-      add(stripDisc(file.replace(/\.[^.]+$/, '')), splitArtists(artist), album);
+    for (const entry of readdirSync(join(LIBRARY, artist, album))) {
+      if (!TRACK.test(entry)) continue;
+      add(stripDisc(entry.replace(TRACK, '')), splitArtists(artist), album);
     }
   }
 }
