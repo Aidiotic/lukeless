@@ -99,6 +99,7 @@ const cache = existsSync(CACHE)
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 function saveCache() {
+  if (OFFLINE) return;   // an offline run has learned nothing worth writing back
   mkdirSync(dirname(CACHE), { recursive: true });
   writeFileSync(CACHE, JSON.stringify(cache));
 }
@@ -110,8 +111,14 @@ function saveCache() {
 const RATE_MS = 3200;
 let lastCall = 0;
 
+/* `--offline` builds from whatever is already cached and asks the store
+   nothing. Useful for rebuilding songs.js after a change to the matching
+   rules, and for getting a partial list out while a long run is still going. */
+const OFFLINE = process.argv.includes('--offline');
+
 async function search(term) {
   if (term in cache) return cache[term];
+  if (OFFLINE) return [];
 
   await sleep(Math.max(0, lastCall + RATE_MS - Date.now()));
   lastCall = Date.now();
