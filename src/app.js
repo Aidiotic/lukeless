@@ -160,12 +160,31 @@ const dayNumber = () => {
 function dailyIndex(day) {
   const list = pool(), N = list.length;
   const cycle = Math.floor(day / N), pos = ((day % N) + N) % N;
-  const order = [...Array(N).keys()], r = rng(cycle * 7919 + 104729 + hashCode(packId));
-  for (let i = N - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [order[i], order[j]] = [order[j], order[i]]; }
-  return list[order[pos]];
+  const r = rng(cycle * 7919 + 104729 + hashCode(packId));
+  return weightedOrder(list, r)[pos];
 }
 
 const hashCode = (s) => [...s].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 99991, 0);
+
+/* Laufey is weighted up. She is 97 of the 623 songs, which on a straight draw
+   would put her on screen about one round in six; this makes it closer to one
+   in two. Matched on the artist field, so features and collaborations count. */
+const LAUFEY = /(^|[^a-z])laufey([^a-z]|$)/i;
+const LAUFEY_WEIGHT = 5;
+const weightOf = (i) => (LAUFEY.test(SONGS[i].artist) ? LAUFEY_WEIGHT : 1);
+
+/* Weighted shuffle, Efraimidis-Spirakis: give each song a key of r^(1/weight)
+   and sort by it. Ordering by that key is equivalent to drawing without
+   replacement in proportion to weight, which is the useful property here —
+   every song still appears exactly once, so the daily cycle keeps its
+   guarantee of no repeat, and a 1v1 never asks the same song twice. The bias
+   decides where in the order things land, not how many times. */
+function weightedOrder(list, rnd) {
+  return list
+    .map((i) => ({ i, key: Math.pow(rnd(), 1 / weightOf(i)) }))
+    .sort((a, b) => b.key - a.key)
+    .map((x) => x.i);
+}
 
 function beginRound(idx, restore) {
   S = { idx, rows: [], done: false, won: false, hint: false };
@@ -452,12 +471,8 @@ function newMatch(isHost, code) {
 /* Host picks the songs. Sampling without replacement, so a match never asks
    the same song twice. */
 function drawSongs() {
-  const list = [...pool()];
-  for (let i = list.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [list[i], list[j]] = [list[j], list[i]];
-  }
-  return list.slice(0, Math.min(VS_ROUNDS, list.length));
+  const list = pool();
+  return weightedOrder(list, Math.random).slice(0, Math.min(VS_ROUNDS, list.length));
 }
 
 function connLine(text, bad) {
@@ -780,8 +795,7 @@ function setMode(next) {
     beginRound(idx, usable ? saved : null);
     if (S.done) showResult(S.won ? 'Solved today.' : 'Today got away.');
   } else {
-    const list = pool();
-    beginRound(list[Math.floor(Math.random() * list.length)]);
+    beginRound(weightedOrder(pool(), Math.random)[0]);
   }
 }
 
