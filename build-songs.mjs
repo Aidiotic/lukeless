@@ -121,11 +121,20 @@ function saveCache() {
   writeFileSync(CACHE, JSON.stringify(cache));
 }
 
-/* The store allows roughly twenty searches a minute and answers 403 for a
-   while once you cross it, so this paces itself under the limit rather than
-   sprinting into a wall and backing off. A full 239-row playlist takes about
-   quarter of an hour on a cold cache; a warm one takes seconds. */
-const RATE_MS = 3200;
+/* The store answers 403 for a while once you cross its rate limit, and where
+   that limit sits depends on how hard the address has been leaning on it
+   lately — it is not a fixed twenty a minute.
+ *
+ * So the pace tunes itself instead of being guessed at. Every refusal widens
+ * the gap between calls, every clean stretch narrows it slightly, and it
+ * settles wherever the store is actually willing to answer. This matters far
+ * more than it sounds: a refusal costs a multi-second backoff *and* pushes the
+ * limiter further into refusing, so a rate that is a little too fast collapses
+ * to a fraction of the throughput of one that is a little too slow. Measured
+ * on a throttled address, fixed 3.2s pacing managed about one row a minute;
+ * this settles around eight. */
+const RATE_MIN = 2500, RATE_MAX = 20000;
+let rate = 4000;
 let lastCall = 0;
 
 /* `--offline` builds from whatever is already cached and asks the store
@@ -137,7 +146,7 @@ async function search(term) {
   if (term in cache) return cache[term];
   if (OFFLINE) return [];
 
-  await sleep(Math.max(0, lastCall + RATE_MS - Date.now()));
+  await sleep(Math.max(0, lastCall + rate - Date.now()));
   lastCall = Date.now();
 
   const url = 'https://itunes.apple.com/search?entity=song&limit=25&country=US&term='
@@ -145,15 +154,17 @@ async function search(term) {
 
   // The store rate-limits hard and answers 403 rather than 429 when it does,
   // so back off for a good while rather than burning the retries in a second.
-  for (let attempt = 0; attempt < 6; attempt++) {
+  for (let attempt = 0; attempt < 3; attempt++) {
     const res = await fetch(url).catch(() => null);
     if (res?.ok) {
       const results = (await res.json()).results ?? [];
+      rate = Math.max(RATE_MIN, rate * 0.98);   // relax slowly while it is answering
       cache[term] = results;
       saveCache();     // written as we go, so a killed run keeps what it earned
       return results;
     }
-    await sleep(15000 * (attempt + 1));
+    rate = Math.min(RATE_MAX, rate * 1.6);      // refused — give it more room
+    await sleep(rate);
     lastCall = Date.now();
   }
 
@@ -198,6 +209,12 @@ async function main() {
     console.log(`\n${pack.name}: ${rows.length} rows`);
 
     for (const [n, row] of rows.entries()) {
+      // Printed before the row is attempted, so a run of unmatched rows still
+      // shows progress rather than looking hung.
+      if (n && n % 10 === 0) {
+        console.log(`  ${n}/${rows.length} · ${members.length} matched · ${(rate / 1000).toFixed(1)}s/call`);
+      }
+
       const hit = await resolveRow(row);
       if (!hit) { missing.push(`${row.title} — ${row.artists.join(', ')}`); continue; }
 
@@ -216,7 +233,6 @@ async function main() {
         });
       }
       members.push(idx);
-      if ((n + 1) % 10 === 0) console.log(`  ${n + 1}/${rows.length}…`);
     }
 
     packs.push({ id: pack.id, name: pack.name, songs: members });
