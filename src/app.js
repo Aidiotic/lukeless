@@ -232,6 +232,32 @@ function weightedOrder(list, rnd) {
     .map((x) => x.i);
 }
 
+/* A running joke, not a weighting concern like the two above: every 5th
+   Endless song has a 70% chance of being AsapSCIENCE — the Pi songs, the
+   periodic table one, whatever else of theirs is in the catalogue — instead
+   of whatever the normal draw would give. Matched on artist rather than a
+   list of titles, so a future re-run of build-songs.mjs that resolves one
+   more of theirs (their "End of the Universe" song isn't in the catalogue
+   under a name close enough to match today) is picked up automatically.
+ *
+ * Only Endless — "every 5 songs" only means something as a counter across a
+   continuous run of rounds, which Daily (one a day) and 1v1 (a fixed, shared
+   6-song draw both players need to see the same way) don't have. Resets on
+   reload; there's no reason to persist a joke across visits. Falls back to a
+   normal draw if the current pack has no AsapSCIENCE at all (e.g. Luke's
+   playlist), rather than reaching outside the selected pool. */
+let endlessCount = 0;
+const ASAPSCIENCE = /(^|[^a-z])asapscience([^a-z]|$)/i;
+
+function pickEndlessSong() {
+  endlessCount++;
+  if (endlessCount % 5 === 0 && Math.random() < 0.7) {
+    const theirs = pool().filter((i) => ASAPSCIENCE.test(SONGS[i].artist));
+    if (theirs.length) return theirs[Math.floor(Math.random() * theirs.length)];
+  }
+  return weightedOrder(pool(), Math.random)[0];
+}
+
 function beginRound(idx, restore) {
   S = { idx, rows: [], done: false, won: false, hint: false };
   if (restore) Object.assign(S, restore, { idx });
@@ -860,7 +886,7 @@ function setMode(next) {
     beginRound(idx, usable ? saved : null);
     if (S.done) showResult(S.won ? 'Solved today.' : 'Today got away.');
   } else {
-    beginRound(weightedOrder(pool(), Math.random)[0]);
+    beginRound(pickEndlessSong());
   }
 }
 
