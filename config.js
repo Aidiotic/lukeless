@@ -14,7 +14,7 @@ window.LUKELESS_CONFIG = {
   // every open tab notices within about ten seconds and reloads onto the
   // notice below — which is also the only way to actually interrupt a match
   // already in progress, short of running a server that could.
-  maintenance: true,
+  maintenance: false,
   maintenanceNotice: "Updated the song weighting and fixed a 1v1 bug. Back shortly.",
 
   // Extra ICE servers. Roughly 10-20% of network pairs — symmetric NAT on both
