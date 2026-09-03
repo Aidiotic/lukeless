@@ -12,7 +12,7 @@
  * difficulty, sent during setup, so both sides score the same ladder.
  */
 
-import { Versus, makeCode, normaliseCode } from './versus.js?v=dev';
+import { Versus, makeCode, normaliseCode } from './versus.js?v=422fd0f';
 
 const NORMAL_CFG = { steps: [1, 2, 4, 7, 11, 16], points: [100, 80, 60, 45, 30, 20] };
 
