@@ -4,3 +4,4 @@ node_modules/
 worker/worker-configuration.d.ts
 worker-startup.cpuprofile
 .DS_Store
+SECURITY_REVIEW.md
