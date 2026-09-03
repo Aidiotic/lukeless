@@ -14,22 +14,34 @@ export class MatchRoom extends DurableObject {
     }
 
     const role = new URL(request.url).searchParams.get('role');
+    const token = new URL(request.url).searchParams.get('token');
     if (role !== 'host' && role !== 'guest') return new Response('Invalid role', { status: 400 });
+    if (!/^[0-9a-f-]{36}$/i.test(token ?? '')) return new Response('Invalid token', { status: 400 });
 
     const sockets = this.ctx.getWebSockets();
     const roles = sockets.map((socket) => socket.deserializeAttachment()?.role);
-    if (role === 'host' && sockets.length) return this.#rejectedSocket('code-used');
+    const sameRole = sockets.find((socket) => socket.deserializeAttachment()?.role === role);
+    const savedToken = await this.ctx.storage.get(`${role}Token`);
+    const reconnecting = savedToken === token;
+    if (reconnecting) {
+      try { sameRole.close(1012, 'Reconnected'); } catch {}
+    }
+    if (role === 'host' && sockets.length && !reconnecting) return this.#rejectedSocket('code-used');
     if (role === 'guest' && !roles.includes('host')) return this.#rejectedSocket('no-match');
-    if (role === 'guest' && roles.includes('guest')) return this.#rejectedSocket('match-full');
+    if (role === 'guest' && !reconnecting && roles.includes('guest')) {
+      return this.#rejectedSocket('match-full');
+    }
 
     const pair = new WebSocketPair();
     const [client, server] = Object.values(pair);
-    server.serializeAttachment({ role });
+    await this.ctx.storage.put(`${role}Token`, token);
+    server.serializeAttachment({ role, token });
     this.ctx.acceptWebSocket(server, [role]);
 
-    if (role === 'guest') {
+    const pairedRoles = this.ctx.getWebSockets().map((socket) => socket.deserializeAttachment()?.role);
+    if (pairedRoles.includes('host') && pairedRoles.includes('guest')) {
       for (const socket of this.ctx.getWebSockets()) {
-        socket.send(JSON.stringify({ __relay: 'paired' }));
+        try { socket.send(JSON.stringify({ __relay: 'paired' })); } catch {}
       }
     }
 
@@ -46,29 +58,36 @@ export class MatchRoom extends DurableObject {
     return new Response(null, { status: 101, webSocket: client });
   }
 
-  webSocketMessage(socket, message) {
+  async webSocketMessage(socket, message) {
     if (typeof message !== 'string' || message.length > 64_000) return;
+    try {
+      const parsed = JSON.parse(message);
+      if (parsed?.__relay === 'ping') {
+        socket.send(JSON.stringify({ __relay: 'pong' }));
+        return;
+      }
+      if (parsed?.t === 'bye') {
+        const role = socket.deserializeAttachment()?.role;
+        if (role) await this.ctx.storage.delete(`${role}Token`);
+      }
+    } catch {}
     for (const peer of this.ctx.getWebSockets()) {
-      if (peer !== socket) peer.send(message);
+      if (peer !== socket) {
+        try { peer.send(message); } catch {}
+      }
     }
   }
 
   webSocketClose(socket, code, reason, wasClean) {
     const rejected = socket.deserializeAttachment()?.rejected;
-    socket.close(code, reason);
+    socket.close(code === 1005 ? 1000 : code, reason);
     if (rejected) return;
-    for (const peer of this.ctx.getWebSockets()) {
-      peer.send(JSON.stringify({ __relay: 'peer-left', clean: wasClean }));
-    }
   }
 
   webSocketError(socket) {
     const rejected = socket.deserializeAttachment()?.rejected;
     try { socket.close(1011, 'Relay error'); } catch {}
     if (rejected) return;
-    for (const peer of this.ctx.getWebSockets()) {
-      if (peer !== socket) peer.send(JSON.stringify({ __relay: 'peer-left' }));
-    }
   }
 }
 

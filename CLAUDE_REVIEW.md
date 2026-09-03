@@ -128,3 +128,18 @@ Empirical verification used a Normal 1v1 hosted on Luke's playlist—the exact
 fallback case, since that pack has no AsapSCIENCE songs. Both peers advanced
 through rounds 1–4 in room `7MSHY`. On `Round 5 of 6`, revealing the answer
 showed `The Pi Song 3.0 (300 Digits of Π)` by `AsapSCIENCE`.
+
+## Relay resilience follow-up
+
+The initial Worker client treated every WebSocket close as a permanent opponent
+departure, so a brief Wi-Fi or mobile-network interruption ended the match.
+Clients now reconnect four times over roughly six seconds using a per-tab token;
+the Durable Object persists each seat token and replaces the stale socket only
+when that token and role match. Explicit `bye` messages release the stored seat.
+Queued game messages flush after pairing, and a 20-second ping/pong keeps idle
+connections alive. Raw transport loss no longer reports `peer-left`; intentional
+Cancel and page-exit paths still send the existing `bye` game message.
+
+The maintenance overlay also has four decorative Israeli-flag corner accents.
+They scale responsively, respect mobile safe-area insets, and are hidden from
+screen readers so the actual maintenance message stays uncluttered.

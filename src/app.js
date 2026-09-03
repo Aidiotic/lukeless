@@ -1125,7 +1125,10 @@ el.joinCode.addEventListener('input', () => {
   el.joinBtn.disabled = el.joinCode.value.length < 5;
 });
 el.joinCode.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !el.joinBtn.disabled) joinMatch(); });
-el.cancelBtn.addEventListener('click', () => endMatch());
+el.cancelBtn.addEventListener('click', () => {
+  match?.link?.send({ t: 'bye' });
+  endMatch();
+});
 el.vsName.addEventListener('input', () => { LS.set('name', el.vsName.value); drawScoreboard(); });
 
 function setDifficulty(insane) {

@@ -111,6 +111,8 @@ gets the code; the other types it in or follows the invite link. From there:
 The relay forwards opaque game messages; it does not choose songs or keep score.
 Both browsers still hold the whole song list, so this remains a game between
 people who are not trying to cheat. The relay endpoint lives in `config.js`.
+Brief connection drops are retried automatically, and idle rooms exchange a
+small keepalive so a transient network or proxy timeout does not end the match.
 
 Deploy the relay after changing `worker/relay.js` or `wrangler.jsonc`:
 
