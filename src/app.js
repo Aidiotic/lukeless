@@ -758,8 +758,62 @@ function versusHandlers() {
   };
 }
 
-function onVersusMessage(msg) {
+/* Everything arriving from the other browser is untrusted input, not a message
+   from a known-good copy of this file. The relay forwards payloads without
+   interpreting them, and the room code is the only thing gating who may send
+   one — the Worker's Origin check stops a browser on another site, but any
+   non-browser client sets that header to whatever it likes. So a "peer" is
+   whoever holds the code.
+ *
+ * Each field is therefore narrowed here, once, to the shape the rest of the
+   file already assumes, rather than at each of its use sites. Unknown mark
+   kinds were an injection; a non-array `songs` or an out-of-range `round`
+   indexes SONGS with garbage and throws mid-round, which strands the match
+   with no way back to the lobby. */
+const clamp = (v, lo, hi) => (Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : lo);
+
+function cleanPeer(msg) {
+  const t = String(msg.t ?? '');
+  switch (t) {
+    case 'hello':
+      return { t, name: String(msg.name ?? 'Opponent').slice(0, 16), build: String(msg.build ?? ''), pack: String(msg.pack ?? '') };
+
+    case 'setup':
+      return {
+        t, pack: String(msg.pack ?? ''), insane: !!msg.insane,
+        songs: (Array.isArray(msg.songs) ? msg.songs : [])
+          .filter((i) => Number.isInteger(i) && i >= 0 && i < SONGS.length)
+          .slice(0, INSANE_VS_ROUNDS),
+      };
+
+    case 'progress':
+      return {
+        t, round: Math.trunc(clamp(msg.round, 0, INSANE_VS_ROUNDS)),
+        marks: (Array.isArray(msg.marks) ? msg.marks : [])
+          .filter((k) => PIP_KINDS.has(k)).slice(0, INSANE_VS_ROUNDS),
+        done: !!msg.done, won: !!msg.won,
+        pts: clamp(msg.pts, 0, 100000), secs: clamp(msg.secs, 0, 3600),
+        tries: Math.trunc(clamp(msg.tries, 0, INSANE_VS_ROUNDS)),
+      };
+
+    case 'start':
+    case 'ready':
+      return { t, round: Math.trunc(clamp(msg.round, 0, INSANE_VS_ROUNDS)) };
+
+    case 'over':
+    case 'bye':
+      return { t };
+
+    default:
+      return null;   // nothing else is part of the protocol
+  }
+}
+
+function onVersusMessage(raw) {
   if (!match) return;
+
+  const msg = cleanPeer(raw);
+  if (!msg) return;
 
   switch (msg.t) {
     case 'hello': {
@@ -787,7 +841,10 @@ function onVersusMessage(msg) {
       // The guest plays the host's pack and difficulty, whatever it had picked.
       if (msg.pack && ALL_PACKS.some((p) => p.id === msg.pack)) { packId = msg.pack; syncPacks(); }
       match.insane = !!msg.insane;
-      match.songs = msg.songs ?? [];
+      match.songs = msg.songs;
+      // Nothing survived validation, so there is no match to play. Saying so
+      // beats sitting in the lobby waiting for a round that cannot start.
+      if (!match.songs.length) { connLine('The other player sent an unusable setup.', true); endMatch('Bad setup.'); }
       break;
     }
 
@@ -829,6 +886,10 @@ function onVersusMessage(msg) {
 
 function startVersusRound(n) {
   if (!match || !match.songs.length) return;
+  // The round number can come from the other browser. Clamping it to the
+  // protocol's maximum is not enough — this match may be six rounds, not
+  // fourteen — and `match.songs[n]` being undefined throws inside beginRound.
+  if (!Number.isInteger(n) || n < 0 || n >= match.songs.length) return;
   clearInterval(clockTimer);
 
   match.round = n;
@@ -989,8 +1050,17 @@ function drawScoreboard() {
   el.themPips.innerHTML = pips(match.live?.marks ?? []);
 }
 
+/* The only three values that may ever reach that class attribute. `marks` can
+   come from the opponent and this string goes through innerHTML, so an
+   unfiltered value here was a peer-controlled script injection: a mark of
+   `x"><img src=x onerror=...>` closed the attribute and the tag and ran
+   whatever followed. Whitelisting is what makes that impossible — escaping
+   alone would leave the next person to edit this line one mistake away from
+   the same bug. Anything unrecognised draws a blank pip. */
+const PIP_KINDS = new Set(['right', 'wrong', 'skip']);
+
 const pips = (marks) => Array.from({ length: (match?.insane ? INSANE_CFG : NORMAL_CFG).steps.length },
-  (_, i) => '<span class="pip ' + (marks[i] ?? '') + '"></span>').join('');
+  (_, i) => '<span class="pip ' + (PIP_KINDS.has(marks?.[i]) ? marks[i] : '') + '"></span>').join('');
 
 function endMatch(why) {
   clearInterval(clockTimer);
