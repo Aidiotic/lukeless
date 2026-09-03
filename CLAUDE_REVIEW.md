@@ -45,6 +45,26 @@ the stylesheet, runtime config, catalog, main module, and the main module's
 still cache a release, but it cannot silently mix that release with the next
 one once it receives the updated page.
 
+Follow-up after a real two-device report: stamping child assets was necessary
+but insufficient because `index.html` itself can be the stale cached file.
+`config.js` now publishes the active release and is already fetched with
+`cache: no-store`. On boot and every maintenance poll, `app.js` compares that
+release with its own stamped module URL. A mismatch replaces the page URL with
+a release-specific query, forcing GitHub Pages and the browser to fetch the
+current HTML and its coherently stamped assets. This closes the stale-root-page
+case instead of waiting up to ten minutes for it to expire.
+
+`src/versus.js` also now forwards a late `peer-unavailable` error after the
+local PeerJS identity has opened. Previously it tried to reject an already
+settled promise, so the join screen could remain on “Connecting…” without
+explaining that the host code was not reachable.
+
+Both follow-ups were exercised locally. A page running release `422fd0f` was
+left open while the served release changed to `selfheal1`; on its next poll it
+navigated to `?release=selfheal1` and fetched all five stamped assets from that
+release. Joining nonexistent code `ZZZZZ` now surfaces “No match with that
+code” instead of silently remaining in the connecting state.
+
 The `BUILD` handshake check remains in place. It is a correctness guard because
 song indices and gameplay messages are only meaningful when both peers run the
 same protocol and catalog; removing it would turn a clear rejection into

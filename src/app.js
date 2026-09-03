@@ -14,6 +14,10 @@
 
 import { Versus, makeCode, normaliseCode } from './versus.js?v=422fd0f';
 
+// The query is stamped by restart.sh. A fresh, uncached config.js announces
+// the live release so even an already-cached page can move itself forward.
+const ASSET_RELEASE = new URL(import.meta.url).searchParams.get('v') ?? 'dev';
+
 const NORMAL_CFG = { steps: [1, 2, 4, 7, 11, 16], points: [100, 80, 60, 45, 30, 20] };
 
 /* Insane: 0.1s is not a typo. Five steps instead of six, and every step is
@@ -1195,12 +1199,23 @@ async function readMaintenance() {
     const on = /maintenance:\s*true/.test(text);
     const m = text.match(/maintenanceNotice:\s*(?:'((?:[^'\\]|\\.)*)'|"((?:[^"\\]|\\.)*)")/);
     const notice = m ? (m[1] ?? m[2]).replace(/\\(.)/g, '$1') : null;
-    return { on, notice };
+    const release = text.match(/release:\s*['"]([^'"]+)['"]/)?.[1] ?? null;
+    return { on, notice, release };
   } catch {
     // Offline for a moment. Falling back to the cached global is still
     // better than blocking the whole boot on a single failed fetch.
-    return { on: !!window.LUKELESS_CONFIG?.maintenance, notice: window.LUKELESS_CONFIG?.maintenanceNotice };
+    return {
+      on: !!window.LUKELESS_CONFIG?.maintenance,
+      notice: window.LUKELESS_CONFIG?.maintenanceNotice,
+      release: window.LUKELESS_CONFIG?.release ?? null,
+    };
   }
+}
+
+function reloadFresh(release) {
+  const url = new URL(location.href);
+  url.searchParams.set('release', release || String(Date.now()));
+  location.replace(url);
 }
 
 function showMaintenance(notice) {
@@ -1212,19 +1227,22 @@ function showMaintenance(notice) {
 
 function pollMaintenance(was) {
   setInterval(async () => {
-    const { on } = await readMaintenance();
-    if (on !== was) location.reload();
+    const { on, release } = await readMaintenance();
+    if (release && release !== ASSET_RELEASE) { reloadFresh(release); return; }
+    if (on !== was) reloadFresh(release);
   }, MAINT_POLL_MS);
 }
 
 // ── boot ───────────────────────────────────────────────────────────────────
 
 const maint = await readMaintenance();
-pollMaintenance(maint.on);
-
-if (maint.on) {
+if (maint.release && maint.release !== ASSET_RELEASE) {
+  reloadFresh(maint.release);
+} else if (maint.on) {
+  pollMaintenance(maint.on);
   showMaintenance(maint.notice);
 } else {
+  pollMaintenance(maint.on);
   el.vsName.value = LS.get('name', '');
   syncPacks();
   syncDifficulty();

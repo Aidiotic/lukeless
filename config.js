@@ -6,6 +6,10 @@
  */
 
 window.LUKELESS_CONFIG = {
+  // Updated by restart.sh. app.js fetches this file without cache and moves
+  // stale pages onto a release-specific URL before allowing a 1v1 handshake.
+  release: '422fd0f',
+
   // ── maintenance ──
   // There is no server behind this site to restart — it's static pages, and a
   // 1v1 match is two browsers talking directly to each other with nothing of

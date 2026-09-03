@@ -87,14 +87,16 @@ export class Versus {
     });
 
     return new Promise((resolve, reject) => {
-      peer.on('open', () => resolve(peer));
+      let opened = false;
+      peer.on('open', () => { opened = true; resolve(peer); });
       peer.on('error', (err) => {
         // `unavailable-id` means somebody already parked on this code. Every
         // other error can arrive later, once we are connected, so it is
         // reported rather than thrown.
-        if (err.type === 'unavailable-id') reject(new Error('That code is already in use.'));
-        else if (err.type === 'peer-unavailable') reject(new Error('No match with that code.'));
+        if (!opened && err.type === 'unavailable-id') reject(new Error('That code is already in use.'));
+        else if (!opened && err.type === 'peer-unavailable') reject(new Error('No match with that code.'));
         else if (this.closed) return;
+        else if (err.type === 'peer-unavailable') this.on.error?.(new Error('No match with that code. Check the code and ask the host to keep this page open.'));
         else this.on.error?.(err);
       });
     });

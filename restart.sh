@@ -36,6 +36,9 @@ release=$(git rev-parse --short HEAD)
 LUKELESS_RELEASE="$release" perl -pi -e \
   's{\?v=[A-Za-z0-9._-]+}{"?v=" . $ENV{LUKELESS_RELEASE}}ge' \
   index.html src/app.js
+LUKELESS_RELEASE="$release" perl -pi -e \
+  's{(release:\s*['\''"])[^'\''"]+}{$1 . $ENV{LUKELESS_RELEASE}}ge' \
+  config.js
 
 # repos/$REPO/pages/builds/latest can report the *previous* commit's "built"
 # status for a few seconds after a push, before GitHub has even started a new
