@@ -94,7 +94,18 @@ export class MatchRoom extends DurableObject {
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    if (url.pathname === '/health') return Response.json({ ok: true });
+
+    /* Security lockdown — the real kill switch for this service.
+       config.js's maintenance flag cannot do this job: it is honoured by the
+       page, and anyone attacking the relay never loads the page. This is
+       deployed state rather than code state, so engaging it is
+       `wrangler deploy --var LOCKDOWN:on` and lifting it is a plain deploy;
+       neither needs an edit here under pressure. Deploying either way also
+       restarts the Durable Objects, which drops every live socket. */
+    const locked = !!env.LOCKDOWN;
+
+    if (url.pathname === '/health') return Response.json({ ok: !locked, locked });
+    if (locked) return new Response('Locked down for maintenance', { status: 503 });
     if (!allowedOrigin(request)) return new Response('Forbidden', { status: 403 });
 
     const match = url.pathname.match(/^\/room\/([A-HJ-NP-Z2-9]{5})$/);
