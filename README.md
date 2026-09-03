@@ -92,10 +92,11 @@ what actually failed.
 
 ## 1v1
 
-Both browsers talk directly over WebRTC, with [PeerJS][]'s public broker for the
-handshake — the same arrangement [clearline][] uses for calls. One player opens a
-match and gets a five-character code; the other types it in, or follows the invite
-link. From there:
+Both browsers connect to a two-seat WebSocket room in the `lukeless-relay`
+Cloudflare Worker. Each five-character match code maps to one Durable Object, so
+the same room is reached from different Wi-Fi, mobile, and restrictive NAT
+networks without depending on a direct WebRTC path. One player opens a match and
+gets the code; the other types it in or follows the invite link. From there:
 
 - Six rounds on Normal or fourteen on Insane, with the same songs on both screens,
   drawn by whoever opened the match.
@@ -105,25 +106,22 @@ link. From there:
 - While a round is live, each side sees the other's *shape* — how many tries spent,
   whether they have finished — and never the song or the guesses.
 
-There is no server keeping score, which means both browsers hold the whole song
-list. It is a game between people who are not trying to cheat; making it
-cheat-proof needs a referee, and a referee needs a backend.
+The relay forwards opaque game messages; it does not choose songs or keep score.
+Both browsers still hold the whole song list, so this remains a game between
+people who are not trying to cheat. The relay endpoint lives in `config.js`.
 
-If a pair of networks cannot connect at all, that is usually symmetric NAT on both
-ends and it needs a TURN relay. `config.js` has a commented-out slot for one.
+Deploy the relay after changing `worker/relay.js` or `wrangler.jsonc`:
 
-[PeerJS]: https://peerjs.com/
-[clearline]: https://aidiotic.github.io/clearline/
+```bash
+npx wrangler deploy
+```
 
 ## Taking it down
 
-There is no server behind this site to restart — it's static pages on GitHub
-Pages, and a 1v1 match runs peer-to-peer with nothing of ours in the middle. The
-closest real equivalent to a restart is `config.js`'s `maintenance` flag: flip
-it on, and every open tab — mid-match or sitting on the menu — notices within
-about ten seconds and reloads onto the notice in `maintenanceNotice`. That
-reload is also the only way to interrupt a match already running, since there
-is no server that could reach into it either.
+The game client is static GitHub Pages, so the closest equivalent to restarting
+that client is `config.js`'s `maintenance` flag. Flip it on and every open tab
+notices within about ten seconds and reloads onto the notice in
+`maintenanceNotice`. The WebSocket relay is a separate Worker deployment.
 
 ```bash
 ./restart.sh "optional reason shown on the maintenance page"
@@ -146,7 +144,7 @@ To do it by hand instead of running the script: edit `maintenance` and
 ```
 index.html        markup
 style.css         lukebox's palette, carried over
-config.js         ICE servers and signalling, editable on a deployed site
+config.js         release, maintenance, and 1v1 relay configuration
 songs.js          generated — do not edit by hand
 build-songs.mjs   playlists/ + Apple's catalogue -> songs.js
 parse.mjs         the Spotify-paste parser, lifted from lukebox
@@ -157,6 +155,8 @@ scripts/set-maintenance.mjs
                   flips config.js's maintenance flag; restart.sh's building block
 src/app.js        the game
 src/versus.js     the 1v1 link
+worker/relay.js   two-seat 1v1 WebSocket room Durable Object
+wrangler.jsonc    Cloudflare Worker deployment configuration
 playlists/        Spotify pastes (.txt) and track lists (.json)
 ```
 

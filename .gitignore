@@ -1,3 +1,6 @@
 .cache/
 node_modules/
+.wrangler/
+worker/worker-configuration.d.ts
+worker-startup.cpuprofile
 .DS_Store

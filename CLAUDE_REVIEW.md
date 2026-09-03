@@ -81,3 +81,33 @@ desynchronized gameplay.
 - Pick the exact real catalog row and confirm it scores as correct.
 - During publish, inspect the deployed HTML and main module and confirm every
   local asset uses the same release query value.
+
+## Definitive cross-network transport fix
+
+The earlier two-tab tests proved the game handshake but did not prove NAT
+traversal: both peers were inside one browser on one machine. A real friend on
+a different network can be behind a symmetric NAT or restrictive firewall, and
+the old PeerJS setup only supplied STUN. Public/demo TURN credentials were
+tested with a real `RTCPeerConnection`; neither produced a relay candidate, so
+they were not shipped.
+
+`src/versus.js` now uses a WebSocket relay instead of WebRTC. The relay is the
+`lukeless-relay` Cloudflare Worker in `worker/relay.js`. Each normalized room
+code maps through `MATCH_ROOMS.getByName(code)` to its own Durable Object. The
+object accepts one host and one guest, emits `paired` only when both seats are
+present, forwards JSON messages without interpreting them, and reports missing,
+used, and full rooms explicitly. The existing hello/setup/start/progress game
+protocol above the transport remains unchanged; its build prefix is now 5.
+
+The deployed relay health endpoint returned `{ "ok": true }`. Local clients
+connected through that live Worker using room `32DWM`; both entered round 1 of
+14 on Insane, and a guest skip changed the host's opponent display to “on try
+2”, proving application messages crossed the relay. A guest joining `ZZZZZ`
+received the intended no-match error. The final Worker deployment version is
+`32eff9cf-50ec-4ee9-9466-0a84ac72b126`; its bundle is 3.38 KiB (1.21 KiB gzip)
+and the deployment reported a 6 ms startup time.
+
+A final capacity test filled room `RDFB4`, then attempted a third guest. The
+third client received “That match already has two players,” while the original
+host and guest both remained in `Round 1 of 14 · Insane`; rejected sockets do
+not emit a false peer-disconnected event into the valid match.

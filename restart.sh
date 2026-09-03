@@ -1,15 +1,11 @@
 #!/usr/bin/env bash
 # restart.sh — take lukeless down for maintenance, then bring it back up.
 #
-# There is no server process behind this site to literally restart: it's
-# static pages on GitHub Pages, and a 1v1 match runs peer-to-peer between two
-# browsers with nothing of ours in the middle. What this does instead is the
-# closest real equivalent — flip config.js's maintenance flag on and push,
-# wait for GitHub Pages to actually publish that commit specifically, then
-# flip it back off and wait again. Any tab open against the site — mid-match
-# or sitting on the menu — notices within its next ~10-second poll and
-# reloads onto the notice, which is also the only way to interrupt a match
-# already running.
+# The game client is static GitHub Pages, so there is no page server process
+# to restart. (The 1v1 WebSocket relay is a separate Cloudflare Worker.) This
+# flips config.js's maintenance flag and pushes, waits for GitHub Pages to
+# publish that exact commit, then flips it back off and waits again. Any open
+# tab notices within its next ~10-second poll and reloads onto the notice.
 #
 # Be aware of the real timing before relying on this for anything time
 # sensitive: each half waits on an actual GitHub Pages build, which usually
@@ -29,7 +25,7 @@ GIT_AUTHOR=(-c user.name="Aidiotic" -c user.email="jidiot72@gmail.com")
 
 # GitHub Pages gives static files a ten-minute cache lifetime. If app.js from
 # one release meets versus.js or songs.js from another, a room code can look
-# broken even though the PeerJS room exists. Stamp every local asset URL with
+# broken even though the relay room exists. Stamp every local asset URL with
 # the feature commit that is being published so a browser fetches one coherent
 # release. The stamp lands in the maintenance-down commit before Pages builds.
 release=$(git rev-parse --short HEAD)

@@ -45,7 +45,7 @@ const ALL_PACKS = PACKS.length > 1
 
 /* Both players must be holding the same songs.js for a shared index to mean
    the same song on both screens. Cheap fingerprint, checked at handshake. */
-const BUILD = '4.' + SONGS.length + '.' + SONGS.reduce((h, s) => (h * 31 + s.title.length) % 99991, 7);
+const BUILD = '5.' + SONGS.length + '.' + SONGS.reduce((h, s) => (h * 31 + s.title.length) % 99991, 7);
 
 /* Everything by default when there is more than one playlist to combine —
    opening on one person's list buries the rest of the songs behind a control
@@ -1165,14 +1165,10 @@ function toast(msg) {
 
 // ── maintenance ──────────────────────────────────────────────────────────
 //
-// There is no server here to restart — this is static pages, and a 1v1 match
-// is two browsers talking directly to each other with nothing of ours in the
-// loop. This flag stands in for one: flip it in config.js and push (or run
-// ./restart.sh, which does both halves of that including waiting for GitHub
-// Pages to actually publish each one) and every open tab — mid-match or
-// just sitting on the menu — notices within one poll and reloads onto the
-// notice below. That reload is also the only way to interrupt a match
-// already running, since nothing server-side could reach into it either.
+// The game client is static GitHub Pages; the WebSocket relay is deployed
+// separately. This flag restarts the client side: flip it in config.js and
+// push (or run ./restart.sh, which waits for both Pages publishes) and every
+// open tab notices within one poll and reloads onto the notice below.
 
 const MAINT_POLL_MS = 10000;
 
