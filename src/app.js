@@ -12,7 +12,7 @@
  * difficulty, sent during setup, so both sides score the same ladder.
  */
 
-import { Versus, makeCode, normaliseCode } from './versus.js?v=63bdc86';
+import { Versus, makeCode, normaliseCode } from './versus.js?v=70e3740';
 
 // The query is stamped by restart.sh. A fresh, uncached config.js announces
 // the live release so even an already-cached page can move itself forward.
