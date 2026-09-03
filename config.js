@@ -8,7 +8,7 @@
 window.LUKELESS_CONFIG = {
   // Updated by restart.sh. app.js fetches this file without cache and moves
   // stale pages onto a release-specific URL before allowing a 1v1 handshake.
-  release: '422fd0f',
+  release: 'eb4a8dd',
 
   // ── maintenance ──
   // There is no server behind this site to restart — it's static pages, and a
@@ -18,8 +18,8 @@ window.LUKELESS_CONFIG = {
   // every open tab notices within about ten seconds and reloads onto the
   // notice below — which is also the only way to actually interrupt a match
   // already in progress, short of running a server that could.
-  maintenance: false,
-  maintenanceNotice: "Emergency 1v1 join fix. Back shortly.",
+  maintenance: true,
+  maintenanceNotice: "Emergency room-code compatibility fix. Back shortly.",
 
   // Extra ICE servers. Roughly 10-20% of network pairs — symmetric NAT on both
   // ends, mostly — cannot reach each other without a TURN relay.
