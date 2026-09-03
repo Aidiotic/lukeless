@@ -250,24 +250,26 @@ function weightedOrder(list, rnd) {
 }
 
 /* A running joke, not a weighting concern like the two above: every 5th
-   Endless song is an AsapSCIENCE track when the selected pack contains one.
-   This is guaranteed instead of probabilistic; a 70% roll made a correctly
-   configured run still look broken.
- *
- * Only Endless — "every 5 songs" only means something as a counter across a
-   continuous run of rounds, which Daily (one a day) and 1v1 (a fixed, shared
-   draw both players need to see the same way) don't have. Resets on
-   reload; there's no reason to persist a joke across visits. Falls back to a
-   If the current pack has none (Luke's does not), it falls back to a normal
-   draw rather than violating the selected playlist. */
+   Endless or 1v1 round is guaranteed to be AsapSCIENCE. Prefer one from the
+   selected pack, but fall back to the full catalogue because Luke's playlist
+   contains none and a "guarantee" that silently disappears is not one. */
 let endlessCount = 0;
 const ASAPSCIENCE = /(^|[^a-z])asapscience([^a-z]|$)/i;
+const ASAP_SONGS = SONGS.map((song, i) => ({ song, i }))
+  .filter(({ song }) => ASAPSCIENCE.test(song.artist))
+  .map(({ i }) => i);
+
+function pickAsapScience(used = new Set()) {
+  const inPack = pool().filter((i) => ASAPSCIENCE.test(SONGS[i].artist) && !used.has(i));
+  const candidates = inPack.length ? inPack : ASAP_SONGS.filter((i) => !used.has(i));
+  return candidates.length ? candidates[Math.floor(Math.random() * candidates.length)] : null;
+}
 
 function pickEndlessSong() {
   endlessCount++;
   if (endlessCount % 5 === 0) {
-    const candidates = pool().filter((i) => ASAPSCIENCE.test(SONGS[i].artist));
-    if (candidates.length) return candidates[Math.floor(Math.random() * candidates.length)];
+    const asap = pickAsapScience();
+    if (asap !== null) return asap;
   }
   return weightedOrder(pool(), Math.random)[0];
 }
@@ -691,12 +693,11 @@ function newMatch(isHost, code) {
    does for solo play, just without replacement across the full match. */
 function drawSongs(insane) {
   const list = pool(), n = Math.min(insane ? INSANE_VS_ROUNDS : NORMAL_VS_ROUNDS, list.length);
-  if (!insane) return weightedOrder(list, Math.random).slice(0, n);
-
   const used = new Set(), out = [];
   while (out.length < n) {
     let idx = null;
-    if (Math.random() < LOFI_CHANCE) {
+    if ((out.length + 1) % 5 === 0) idx = pickAsapScience(used);
+    if (idx === null && insane && Math.random() < LOFI_CHANCE) {
       const lofi = list.filter((i) => LOFI_RE.test(SONGS[i].title) && !used.has(i));
       if (lofi.length) idx = lofi[Math.floor(Math.random() * lofi.length)];
     }

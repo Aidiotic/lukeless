@@ -111,3 +111,20 @@ A final capacity test filled room `RDFB4`, then attempted a third guest. The
 third client received “That match already has two players,” while the original
 host and guest both remained in `Round 1 of 14 · Insane`; rejected sockets do
 not emit a false peer-disconnected event into the valid match.
+
+## AsapSCIENCE round-five guarantee
+
+The earlier implementation incremented `endlessCount` only in solo Endless and
+only selected AsapSCIENCE from the active pack. It therefore did nothing in
+1v1, and Luke's playlist (which has zero AsapSCIENCE entries) silently skipped
+the easter egg. `pickAsapScience` now prefers eligible tracks in the active pack
+and falls back to the three AsapSCIENCE entries in the full catalog. Endless
+uses it every fifth song. The authoritative host-side `drawSongs` also inserts
+it at every fifth 1v1 position before applying Normal weighting or Insane's
+lofi bias, so Normal round 5 and Insane rounds 5 and 10 are guaranteed and
+remain identical for both players.
+
+Empirical verification used a Normal 1v1 hosted on Luke's playlist—the exact
+fallback case, since that pack has no AsapSCIENCE songs. Both peers advanced
+through rounds 1–4 in room `7MSHY`. On `Round 5 of 6`, revealing the answer
+showed `The Pi Song 3.0 (300 Digits of Π)` by `AsapSCIENCE`.

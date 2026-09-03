@@ -105,6 +105,8 @@ gets the code; the other types it in or follows the invite link. From there:
 - A round has a 90-second clock. Running it out forfeits that round, not the match.
 - While a round is live, each side sees the other's *shape* — how many tries spent,
   whether they have finished — and never the song or the guesses.
+- Every fifth round is an AsapSCIENCE track. If the selected pack has none, the
+  easter egg deliberately reaches into the full catalog so the guarantee holds.
 
 The relay forwards opaque game messages; it does not choose songs or keep score.
 Both browsers still hold the whole song list, so this remains a game between
