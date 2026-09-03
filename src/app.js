@@ -772,6 +772,12 @@ function versusHandlers() {
    with no way back to the lobby. */
 const clamp = (v, lo, hi) => (Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : lo);
 
+/* Once setup has landed the real ceiling is this match's length, not the
+   protocol's: round 13 is meaningless in a six-round match. Every consumer
+   happens to compare against match.round first, so an over-range value is
+   inert today — this keeps it inert if one of them ever stops comparing. */
+const roundCeiling = () => Math.max(0, (match?.songs?.length || INSANE_VS_ROUNDS) - 1);
+
 function cleanPeer(msg) {
   const t = String(msg.t ?? '');
   switch (t) {
@@ -788,7 +794,7 @@ function cleanPeer(msg) {
 
     case 'progress':
       return {
-        t, round: Math.trunc(clamp(msg.round, 0, INSANE_VS_ROUNDS)),
+        t, round: Math.trunc(clamp(msg.round, 0, roundCeiling())),
         marks: (Array.isArray(msg.marks) ? msg.marks : [])
           .filter((k) => PIP_KINDS.has(k)).slice(0, INSANE_VS_ROUNDS),
         done: !!msg.done, won: !!msg.won,
@@ -798,7 +804,7 @@ function cleanPeer(msg) {
 
     case 'start':
     case 'ready':
-      return { t, round: Math.trunc(clamp(msg.round, 0, INSANE_VS_ROUNDS)) };
+      return { t, round: Math.trunc(clamp(msg.round, 0, roundCeiling())) };
 
     case 'over':
     case 'bye':
@@ -838,6 +844,13 @@ function onVersusMessage(raw) {
     }
 
     case 'setup': {
+      /* Direction matters as much as shape. The host owns the setup, the
+         round pointer and the end of the match; a guest sending any of those
+         is either a bug or someone cheating, since a guest that can rewrite
+         `match.songs` mid-play picks the host's songs for them — and knows
+         the answers. Only before the first round, too: a second setup during
+         play would swap the catalogue out from under the round in progress. */
+      if (match.isHost || match.phase !== 'lobby') break;
       // The guest plays the host's pack and difficulty, whatever it had picked.
       if (msg.pack && ALL_PACKS.some((p) => p.id === msg.pack)) { packId = msg.pack; syncPacks(); }
       match.insane = !!msg.insane;
@@ -849,7 +862,8 @@ function onVersusMessage(raw) {
     }
 
     case 'start':
-      startVersusRound(msg.round ?? 0);
+      if (match.isHost) break;          // the host advances its own rounds, in maybeAdvance
+      startVersusRound(msg.round);
       break;
 
     case 'progress':
@@ -875,6 +889,7 @@ function onVersusMessage(raw) {
       break;
 
     case 'over':
+      if (match.isHost) break;          // likewise: only the host calls a match finished
       showMatchResult();
       break;
 
@@ -1220,6 +1235,14 @@ el.copyLinkBtn.addEventListener('click', () => {
 el.shareBtn.addEventListener('click', () => copy(shareText(), 'Result copied'));
 el.claudeBtn.addEventListener('click', () => copy(fullReport(), 'Full report copied'));
 el.boardShareBtn.addEventListener('click', () => copy(fullReport(), 'Full report copied'));
+// These three were inline onclick attributes. They moved here so that
+// script-src can stay 'self' with no 'unsafe-inline' — a script-src that
+// allows inline code cannot stop an injected <img onerror>, which is exactly
+// the shape the pips() bug took.
+el.howClose.addEventListener('click', () => howDlg.close());
+el.statsClose.addEventListener('click', () => statsDlg.close());
+el.boardClose.addEventListener('click', () => boardDlg.close());
+
 el.howBtn.addEventListener('click', () => howDlg.showModal());
 el.statsBtn.addEventListener('click', () => { drawStats(); statsDlg.showModal(); });
 el.boardBtn.addEventListener('click', () => { drawBoard(); boardDlg.showModal(); });

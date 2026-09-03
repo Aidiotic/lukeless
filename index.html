@@ -5,6 +5,29 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>lukeless — name the song from a one-second clip</title>
 <meta name="description" content="Guess the song from lukebox's playlist in as few seconds as you can. Solo, or 1v1 against a friend.">
+
+<!-- A second line of defence behind escaping, not a replacement for it. If a
+     future edit drops an unescaped value into innerHTML the way pips() once
+     did, script-src 'self' means the injected <img onerror> never runs.
+     GitHub Pages cannot set response headers, so this has to be a meta tag —
+     which means frame-ancestors is not available here.
+     style-src needs 'unsafe-inline' because render() builds style="left:…"
+     into innerHTML; script-src deliberately does not, and must not.
+     connect-src lists the relay explicitly, so moving relayServer in
+     config.js means updating this line too. -->
+<meta http-equiv="Content-Security-Policy" content="
+  default-src 'self';
+  script-src 'self';
+  style-src 'self' https://fonts.googleapis.com 'unsafe-inline';
+  font-src https://fonts.gstatic.com;
+  img-src 'self' https://*.mzstatic.com;
+  media-src https://*.itunes.apple.com;
+  connect-src 'self' wss://lukeless-relay.dropline.workers.dev https://lukeless-relay.dropline.workers.dev;
+  object-src 'none';
+  base-uri 'self';
+  form-action 'self';
+">
+
 <link rel="stylesheet" href="style.css?v=c325707">
 </head>
 <body>
@@ -182,7 +205,7 @@
   <p>1v1 runs directly between the two browsers, with no server keeping score. That
      also means both players' browsers hold the answers — it is a game between people
      who are not trying to cheat.</p>
-  <button class="btn close" onclick="howDlg.close()">Got it</button>
+  <button class="btn close" id="howClose">Got it</button>
 </dialog>
 
 <dialog id="statsDlg">
@@ -198,7 +221,7 @@
     <div class="stat"><b id="sVsPlayed">0</b><span>1v1 played</span></div>
     <div class="stat"><b id="sVsWon">0</b><span>1v1 won</span></div>
   </div>
-  <button class="btn close" onclick="statsDlg.close()">Close</button>
+  <button class="btn close" id="statsClose">Close</button>
 </dialog>
 
 <dialog id="boardDlg">
@@ -207,7 +230,7 @@
   <div class="board-note" id="boardNote"></div>
   <div class="actions">
     <button class="btn primary" id="boardShareBtn">Copy full report</button>
-    <button class="btn" onclick="boardDlg.close()">Close</button>
+    <button class="btn" id="boardClose">Close</button>
   </div>
 </dialog>
 
