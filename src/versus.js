@@ -11,10 +11,48 @@ const CODE_LENGTH = 5;
 const DEFAULT_RELAY = 'wss://lukeless-relay.dropline.workers.dev';
 const RETRY_DELAYS = [300, 800, 1600, 3000];
 
+/* A guest can genuinely beat the host to the relay: the host's code is on
+   screen before its own socket has finished registering, so "no match with
+   that code" is often just "not yet". Treating that as fatal is why joining
+   could need a second attempt to work — retry across roughly six seconds
+   before believing it. */
+const JOIN_DELAYS = [400, 900, 1800, 3000];
+
+/* Rejection sampling rather than a plain modulo. 256 is not a multiple of 31,
+   so `byte % 31` hands the first eight letters an extra chance each and the
+   code space is not quite as large as it looks. 248 is 31 × 8, so bytes above
+   it are thrown away and every letter is then equally likely. */
 export function makeCode() {
-  const bytes = crypto.getRandomValues(new Uint8Array(CODE_LENGTH));
-  return [...bytes].map((byte) => ALPHABET[byte % ALPHABET.length]).join('');
+  const out = [];
+  while (out.length < CODE_LENGTH) {
+    for (const byte of crypto.getRandomValues(new Uint8Array(CODE_LENGTH))) {
+      if (byte < 248 && out.length < CODE_LENGTH) out.push(ALPHABET[byte % ALPHABET.length]);
+    }
+  }
+  return out.join('');
 }
+
+/* The code names the room; this is what proves you were invited to it. Five
+   readable characters is roughly 28 million rooms, which is small enough to
+   walk and easy to overhear, so it cannot be the credential. 26 characters
+   out of 32 is about 130 bits — not guessable, and the relay seals a room
+   long before anyone could try. It travels in the invite link and never in a
+   request URL, so it stays out of logs. */
+const KEY_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+const KEY_LENGTH = 26;
+
+export function makeKey() {
+  const out = [];
+  while (out.length < KEY_LENGTH) {
+    for (const byte of crypto.getRandomValues(new Uint8Array(KEY_LENGTH))) {
+      if (byte < 224 && out.length < KEY_LENGTH) out.push(KEY_ALPHABET[byte % KEY_ALPHABET.length]);
+    }
+  }
+  return out.join('');
+}
+
+export const normaliseKey = (text) =>
+  String(text ?? '').toUpperCase().replace(/[^A-Z2-7]/g, '').slice(0, KEY_LENGTH);
 
 export const normaliseCode = (text) =>
   text.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, CODE_LENGTH);
@@ -30,11 +68,13 @@ export class Versus {
     this.retryTimer = null;
     this.heartbeat = null;
     this.queue = [];
+    this.joinTries = 0;
+    this.rejoin = false;
     this.token = crypto.randomUUID();
   }
 
-  host(code) { return this.#connect(code, 'host'); }
-  join(code) { return this.#connect(code, 'guest'); }
+  host(code, key) { return this.#connect(code, 'host', key); }
+  join(code, key) { return this.#connect(code, 'guest', key); }
 
   send(message) {
     if (this.ready && this.socket?.readyState === WebSocket.OPEN) {
@@ -53,9 +93,10 @@ export class Versus {
     this.socket = null;
   }
 
-  #connect(code, role) {
+  #connect(code, role, key) {
     this.code = code;
     this.role = role;
+    this.key = key;
     return this.#openSocket(true);
   }
 
@@ -63,7 +104,14 @@ export class Versus {
     const configured = window.LUKELESS_CONFIG?.relayServer ?? DEFAULT_RELAY;
     const base = configured.replace(/^http/, 'ws').replace(/\/$/, '');
     const query = new URLSearchParams({ role: this.role, token: this.token });
-    const socket = new WebSocket(`${base}/room/${encodeURIComponent(this.code)}?${query}`);
+
+    /* The key rides in the WebSocket subprotocol rather than the query string.
+       Request URLs get written to request logs; a subprotocol does not, and
+       this value is the thing that actually gates the room. */
+    const socket = new WebSocket(
+      `${base}/room/${encodeURIComponent(this.code)}?${query}`,
+      ['lukeless-v1', this.key],
+    );
     this.socket = socket;
 
     return new Promise((resolve, reject) => {
@@ -104,7 +152,7 @@ export class Versus {
           }
           return;
         }
-        if (message?.__relay === 'no-match') return this.#relayProblem('No match with that code. Ask the host to keep their page open.');
+        if (message?.__relay === 'no-match') return this.#noMatch();
         if (message?.__relay === 'code-used') return this.#relayProblem('That code is already in use. Open a new match.');
         if (message?.__relay === 'match-full') return this.#relayProblem('That match already has two players.');
         if (message?.__relay === 'peer-left') {
@@ -127,6 +175,14 @@ export class Versus {
         if (this.closed || socket !== this.socket) return;
         this.ready = false;
         clearInterval(this.heartbeat);
+        // A rejected join reconnects on its own schedule, not the drop one.
+        if (this.rejoin) {
+          this.rejoin = false;
+          this.retryTimer = setTimeout(() => {
+            this.#openSocket(false).catch(() => {});
+          }, JOIN_DELAYS[this.joinTries++]);
+          return;
+        }
         if (this.retry < RETRY_DELAYS.length) {
           const delay = RETRY_DELAYS[this.retry++];
           this.retryTimer = setTimeout(() => {
@@ -146,6 +202,20 @@ export class Versus {
     this.closed = true;
     this.on.error?.(new Error(message));
     try { this.socket?.close(1008, message.slice(0, 100)); } catch {}
+  }
+
+  /* Mid-match this means the room genuinely went away, so fall through to the
+     ordinary drop handling. Before pairing it usually means the host has not
+     landed yet, so close and come back rather than giving up on the first
+     answer. */
+  #noMatch() {
+    if (this.everReady) return this.#relayProblem('No match with that code.');
+    if (this.joinTries >= JOIN_DELAYS.length) {
+      return this.#relayError('No match with that code. Ask the host to keep their page open.');
+    }
+    this.rejoin = true;
+    this.on.status?.('Looking for that match…');
+    try { this.socket?.close(1000, 'Retrying'); } catch {}
   }
 
   #relayProblem(message) {

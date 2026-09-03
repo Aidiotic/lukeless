@@ -360,3 +360,13 @@ footer a { color: var(--clay-strong); }
 .flag-ne { top: max(18px, env(safe-area-inset-top)); right: max(18px, env(safe-area-inset-right)); transform: rotate(5deg); }
 .flag-sw { bottom: max(18px, env(safe-area-inset-bottom)); left: max(18px, env(safe-area-inset-left)); transform: rotate(5deg); }
 .flag-se { bottom: max(18px, env(safe-area-inset-bottom)); right: max(18px, env(safe-area-inset-right)); transform: rotate(-5deg); }
+
+/* Shown when config.js sets `limited`. A quiet strip rather than a modal —
+   the game still works, it is the 1v1 side that is deliberately narrowed. */
+.limited-banner {
+  margin: 0 0 18px; padding: 10px 14px;
+  border: 1px solid var(--rule); border-left: 3px solid var(--clay-strong);
+  border-radius: 0 8px 8px 0; background: var(--raised);
+  color: var(--muted); font-size: 13.5px; line-height: 1.45;
+}
+.limited-banner b { color: var(--ink); }

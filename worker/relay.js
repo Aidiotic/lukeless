@@ -2,10 +2,34 @@ import { DurableObject } from 'cloudflare:workers';
 
 const SITE_ORIGIN = 'https://aidiotic.github.io';
 
+/* How long a seat is held open for a client that dropped. Clients retry for
+   roughly six seconds, so this has to outlast that or a brief blip would be
+   reported as the opponent leaving. */
+const GRACE_MS = 10_000;
+
 function allowedOrigin(request) {
   const origin = request.headers.get('Origin') ?? '';
   return origin === SITE_ORIGIN || /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
 }
+
+/* Wrong keys are not free. Five is far more than a real invite link ever
+   needs and far fewer than a guess would take, and a sealed room stays sealed
+   so there is no window to grind in. */
+const MAX_BAD_KEYS = 5;
+
+const sha256 = async (text) => {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
+};
+
+/* Compare every character so the time taken says nothing about how much of
+   the key was right. */
+const sameSecret = (a, b) => {
+  if (typeof a !== 'string' || typeof b !== 'string' || a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+};
 
 export class MatchRoom extends DurableObject {
   async fetch(request) {
@@ -17,6 +41,30 @@ export class MatchRoom extends DurableObject {
     const token = new URL(request.url).searchParams.get('token');
     if (role !== 'host' && role !== 'guest') return new Response('Invalid role', { status: 400 });
     if (!/^[0-9a-f-]{36}$/i.test(token ?? '')) return new Response('Invalid token', { status: 400 });
+
+    /* The offered subprotocols are "lukeless-v1" and the invite key. The room
+       code only names the room; this is what proves the caller was invited. */
+    const offered = (request.headers.get('Sec-WebSocket-Protocol') ?? '')
+      .split(',').map((s) => s.trim());
+    const key = offered[1] ?? '';
+    if (!/^[A-Z2-7]{26}$/.test(key)) return this.#rejectedSocket('no-match');
+
+    if (await this.ctx.storage.get('sealed')) return this.#rejectedSocket('no-match');
+
+    const keyHash = await sha256(key);
+    const known = await this.ctx.storage.get('keyHash');
+    if (known === undefined) {
+      // First caller in defines the room. Only a host may do that.
+      if (role !== 'host') return this.#rejectedSocket('no-match');
+      await this.ctx.storage.put('keyHash', keyHash);
+    } else if (!sameSecret(known, keyHash)) {
+      /* Deliberately the same answer as a room that does not exist, so this
+         cannot be used to discover which codes are live. */
+      const bad = ((await this.ctx.storage.get('badKeys')) ?? 0) + 1;
+      await this.ctx.storage.put('badKeys', bad);
+      if (bad >= MAX_BAD_KEYS) await this.ctx.storage.put('sealed', true);
+      return this.#rejectedSocket('no-match');
+    }
 
     const sockets = this.ctx.getWebSockets();
     const roles = sockets.map((socket) => socket.deserializeAttachment()?.role);
@@ -45,7 +93,10 @@ export class MatchRoom extends DurableObject {
       }
     }
 
-    return new Response(null, { status: 101, webSocket: client });
+    return new Response(null, {
+      status: 101, webSocket: client,
+      headers: { 'Sec-WebSocket-Protocol': 'lukeless-v1' },
+    });
   }
 
   #rejectedSocket(reason) {
@@ -55,7 +106,10 @@ export class MatchRoom extends DurableObject {
     this.ctx.acceptWebSocket(server);
     server.send(JSON.stringify({ __relay: reason }));
     server.close(1008, reason);
-    return new Response(null, { status: 101, webSocket: client });
+    return new Response(null, {
+      status: 101, webSocket: client,
+      headers: { 'Sec-WebSocket-Protocol': 'lukeless-v1' },
+    });
   }
 
   async webSocketMessage(socket, message) {
@@ -78,16 +132,41 @@ export class MatchRoom extends DurableObject {
     }
   }
 
-  webSocketClose(socket, code, reason, wasClean) {
+  async webSocketClose(socket, code, reason) {
     const rejected = socket.deserializeAttachment()?.rejected;
-    socket.close(code === 1005 ? 1000 : code, reason);
+    try { socket.close(code === 1005 ? 1000 : code, reason); } catch {}
     if (rejected) return;
+    await this.ctx.storage.setAlarm(Date.now() + GRACE_MS);
   }
 
-  webSocketError(socket) {
+  async webSocketError(socket) {
     const rejected = socket.deserializeAttachment()?.rejected;
     try { socket.close(1011, 'Relay error'); } catch {}
     if (rejected) return;
+    await this.ctx.storage.setAlarm(Date.now() + GRACE_MS);
+  }
+
+  /* A socket closing is not the same as a player leaving — that is why raw
+     transport loss is not reported as a departure. But something has to
+     decide once the reconnect window has passed, and nothing did: a seat that
+     was never released kept its token for ever, so an abandoned room left
+     storage behind permanently, and the player still sitting there was never
+     told the other one was not coming back. Both are the same question asked
+     late, so both are answered here. */
+  async alarm() {
+    const live = this.ctx.getWebSockets().filter((s) => !s.deserializeAttachment()?.rejected);
+    const present = new Set(live.map((s) => s.deserializeAttachment()?.role));
+
+    for (const role of ['host', 'guest']) {
+      if (present.has(role)) continue;
+      if (await this.ctx.storage.get(`${role}Token`) === undefined) continue;
+      await this.ctx.storage.delete(`${role}Token`);
+      for (const peer of live) {
+        try { peer.send(JSON.stringify({ __relay: 'peer-left' })); } catch {}
+      }
+    }
+
+    if (!live.length) await this.ctx.storage.deleteAll();   // nobody left; keep nothing
   }
 }
 

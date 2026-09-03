@@ -12,7 +12,7 @@
  * difficulty, sent during setup, so both sides score the same ladder.
  */
 
-import { Versus, makeCode, normaliseCode } from './versus.js?v=c325707';
+import { Versus, makeCode, makeKey, normaliseCode, normaliseKey } from './versus.js?v=c325707';
 
 // The query is stamped by restart.sh. A fresh, uncached config.js announces
 // the live release so even an already-cached page can move itself forward.
@@ -715,31 +715,51 @@ function connLine(text, bad) {
   el.conn.classList.toggle('bad', !!bad);
 }
 
+/* An invite is a code and a key. The code names the room and is fine to say
+   out loud; the key is what lets you in, so it only ever travels in the link.
+   A bare code cannot join, which is the point — overhearing one is useless. */
+let inviteKey = '';
+
+function readInvite(text) {
+  const raw = String(text ?? '').trim();
+  return {
+    code: normaliseCode(/[?&]vs=([^&\s]+)/.exec(raw)?.[1] ?? raw),
+    key: normaliseKey(/[?&]k=([^&\s]+)/.exec(raw)?.[1] ?? ''),
+  };
+}
+
 async function openMatch() {
   const code = makeCode();
   match = newMatch(true, code);
+  match.key = makeKey();
   el.codeOut.textContent = code;
   el.lobbyPick.hidden = true;
   el.lobbyWait.hidden = false;
   connLine('Waiting for someone to join…');
 
   match.link = new Versus({ on: versusHandlers() });
-  try { await match.link.host(code); }
+  try { await match.link.host(code, match.key); }
   catch (e) { connLine(e.message, true); resetLobby(); }
 }
 
 async function joinMatch() {
-  const code = normaliseCode(el.joinCode.value);
+  const { code, key: pasted } = readInvite(el.joinCode.value);
+  const key = pasted || inviteKey;
   if (code.length < 5) { connLine('That code is too short.', true); return; }
+  if (!key) {
+    connLine('Paste the whole invite link — a code on its own cannot join a match.', true);
+    return;
+  }
 
   match = newMatch(false, code);
+  match.key = key;
   el.lobbyPick.hidden = true;
   el.lobbyWait.hidden = false;
   el.codeOut.textContent = code;
   connLine('Connecting…');
 
   match.link = new Versus({ on: versusHandlers() });
-  try { await match.link.join(code); }
+  try { await match.link.join(code, key); }
   catch (e) { connLine(e.message, true); resetLobby(); }
 }
 
@@ -749,6 +769,7 @@ function versusHandlers() {
       match.link.send({ t: 'hello', name: myName(), build: BUILD, pack: packId });
     },
     message: onVersusMessage,
+    status: (text) => connLine(text),
     close: () => {
       if (!match) return;
       connLine('Your opponent disconnected.', true);
@@ -1067,9 +1088,9 @@ function drawScoreboard() {
 
 /* The only three values that may ever reach that class attribute. `marks` can
    come from the opponent and this string goes through innerHTML, so an
-   unfiltered value here was a peer-controlled script injection: a mark of
-   `x"><img src=x onerror=...>` closed the attribute and the tag and ran
-   whatever followed. Whitelisting is what makes that impossible — escaping
+   unfiltered value here was a peer-controlled script injection, closing the
+   attribute and the tag to run what followed. Whitelisting is what makes
+   that impossible — escaping
    alone would leave the next person to edit this line one mistake away from
    the same bug. Anything unrecognised draws a blank pip. */
 const PIP_KINDS = new Set(['right', 'wrong', 'skip']);
@@ -1206,8 +1227,11 @@ el.nextBtn.addEventListener('click', () => {
 el.openBtn.addEventListener('click', openMatch);
 el.joinBtn.addEventListener('click', joinMatch);
 el.joinCode.addEventListener('input', () => {
-  el.joinCode.value = normaliseCode(el.joinCode.value);
-  el.joinBtn.disabled = el.joinCode.value.length < 5;
+  // Tidy a hand-typed code, but leave a pasted invite link intact — stripping
+  // it down to five characters would throw the key away.
+  if (!/[?&]vs=/.test(el.joinCode.value)) el.joinCode.value = normaliseCode(el.joinCode.value);
+  const { code, key } = readInvite(el.joinCode.value);
+  el.joinBtn.disabled = code.length < 5 || !(key || inviteKey);
 });
 el.joinCode.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !el.joinBtn.disabled) joinMatch(); });
 el.cancelBtn.addEventListener('click', () => {
@@ -1228,7 +1252,8 @@ el.vsNormalBtn.addEventListener('click', () => setDifficulty(false));
 el.vsInsaneBtn.addEventListener('click', () => setDifficulty(true));
 
 el.copyLinkBtn.addEventListener('click', () => {
-  const url = location.origin + location.pathname + '?vs=' + match.code;
+  // The key goes in the link and nowhere else, so this is the whole invite.
+  const url = location.origin + location.pathname + '?vs=' + match.code + '&k=' + match.key;
   copy(url, 'Invite link copied');
 });
 
@@ -1289,11 +1314,15 @@ const MAINT_POLL_MS = 10000;
 async function readMaintenance() {
   try {
     const text = await fetch('config.js?t=' + Date.now(), { cache: 'no-store' }).then((r) => r.text());
-    const on = /maintenance:\s*true/.test(text);
+    /* Anchored to the start of a line so the words "maintenance: true" sitting
+       in a comment cannot put the site down with no way back. */
+    const on = /^\s*maintenance:\s*true\s*,?\s*$/m.test(text);
     const m = text.match(/maintenanceNotice:\s*(?:'((?:[^'\\]|\\.)*)'|"((?:[^"\\]|\\.)*)")/);
     const notice = m ? (m[1] ?? m[2]).replace(/\\(.)/g, '$1') : null;
     const release = text.match(/release:\s*['"]([^'"]+)['"]/)?.[1] ?? null;
-    return { on, notice, release };
+    const limited = /^\s*limited:\s*true\s*,?\s*$/m.test(text);
+    const lm = text.match(/limitedNotice:\s*(?:'((?:[^'\\]|\\.)*)'|"((?:[^"\\]|\\.)*)")/);
+    return { on, notice, release, limited, limitedNotice: lm ? (lm[1] ?? lm[2]).replace(/\\(.)/g, '$1') : null };
   } catch {
     // Offline for a moment. Falling back to the cached global is still
     // better than blocking the whole boot on a single failed fetch.
@@ -1301,6 +1330,8 @@ async function readMaintenance() {
       on: !!window.LUKELESS_CONFIG?.maintenance,
       notice: window.LUKELESS_CONFIG?.maintenanceNotice,
       release: window.LUKELESS_CONFIG?.release ?? null,
+      limited: !!window.LUKELESS_CONFIG?.limited,
+      limitedNotice: window.LUKELESS_CONFIG?.limitedNotice ?? null,
     };
   }
 }
@@ -1312,8 +1343,20 @@ function reloadFresh(release) {
 }
 
 function showMaintenance(notice) {
-  stopClip();
+  stopClip();                       // needs the controls, so it goes before the removal below
   match?.link?.close();
+  match = null;
+
+  /* Tear the app down rather than paint over it, so a maintenance state is
+     true of the game itself and not just of one div.
+   *
+   * Treat this as a courtesy to players, never as a control: during an
+   * incident the thing that actually stops play is the relay's LOCKDOWN
+   * flag, which is enforced server-side. Reach for that one. */
+  document.querySelector('.wrap')?.remove();
+  audio.pause();
+  audio.removeAttribute('src');
+
   el.maintOverlay.hidden = false;
   el.maintNotice.textContent = notice || 'lukeless is down for a quick update. Back in a few minutes.';
 }
@@ -1336,6 +1379,13 @@ if (maint.release && maint.release !== ASSET_RELEASE) {
   showMaintenance(maint.notice);
 } else {
   pollMaintenance(maint.on);
+
+  if (maint.limited) {
+    el.limitedBanner.textContent = maint.limitedNotice
+      || 'Limited mode — 1v1 is invite-link only.';
+    el.limitedBanner.hidden = false;
+  }
+
   el.vsName.value = LS.get('name', '');
   syncPacks();
   syncDifficulty();
@@ -1344,11 +1394,13 @@ if (maint.release && maint.release !== ASSET_RELEASE) {
 
   /* ?vs=CODE is an invite. Land straight in the 1v1 tab with the code filled
      in rather than making someone type what they just clicked. */
-  const invite = normaliseCode(new URLSearchParams(location.search).get('vs') ?? '');
+  const params = new URLSearchParams(location.search);
+  const invite = normaliseCode(params.get('vs') ?? '');
+  inviteKey = normaliseKey(params.get('k') ?? '');
   if (invite.length === 5) {
     setMode('versus');
     el.joinCode.value = invite;
-    el.joinBtn.disabled = false;
+    el.joinBtn.disabled = !inviteKey;
     connLine('Ready to join match ' + invite + '.');
   } else {
     setMode('daily');

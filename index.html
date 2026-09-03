@@ -32,6 +32,7 @@
 </head>
 <body>
 <div class="wrap">
+  <div class="limited-banner" id="limitedBanner" hidden></div>
   <header>
     <div class="toolbar">
       <button class="icon-btn" id="howBtn" title="How to play" aria-label="How to play">?</button>
@@ -54,7 +55,8 @@
   <!-- ── the lobby: only up in 1v1, before a match is running ── -->
   <div class="card vs-lobby" id="lobby">
     <h2 id="lobbyTitle">Play someone</h2>
-    <p id="lobbyText">One of you opens a match and reads out the code. Both players get
+    <p id="lobbyText">One of you opens a match and sends the other the invite link — the code alone
+      will not let anyone in. Both players get
       the same six songs on Normal or fourteen on Insane; fastest correct guess takes the round. Whichever difficulty
       the host has picked below is what the whole match plays at.</p>
 
@@ -77,8 +79,8 @@
       </div>
       <div class="field" style="margin-top:14px">
         <label for="joinCode">…or join one</label>
-        <input type="text" id="joinCode" placeholder="CODE" autocomplete="off"
-               autocapitalize="characters" spellcheck="false" maxlength="5">
+        <input type="text" id="joinCode" placeholder="Paste invite link" autocomplete="off"
+               autocapitalize="characters" spellcheck="false" maxlength="120">
       </div>
       <div class="actions">
         <button class="btn" id="joinBtn" disabled>Join</button>
