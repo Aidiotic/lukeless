@@ -41,7 +41,7 @@ const ALL_PACKS = PACKS.length > 1
 
 /* Both players must be holding the same songs.js for a shared index to mean
    the same song on both screens. Cheap fingerprint, checked at handshake. */
-const BUILD = '2.' + SONGS.length + '.' + SONGS.reduce((h, s) => (h * 31 + s.title.length) % 99991, 7);
+const BUILD = '3.' + SONGS.length + '.' + SONGS.reduce((h, s) => (h * 31 + s.title.length) % 99991, 7);
 
 /* Everything by default when there is more than one playlist to combine —
    opening on one person's list buries the rest of the songs behind a control
@@ -285,33 +285,51 @@ function pickInsaneSong() {
 }
 
 function buildChoices(idx) {
-  const song = SONGS[idx], answer = norm(song.title), seen = new Set([answer]);
-  const titleWords = answer.split(' ').length;
-  const artistWords = new Set(norm(song.artist).split(' ').filter((w) => w.length > 2));
-  const r = rng(hashCode(BUILD + '|decoys|' + idx));
+  const song = SONGS[idx];
+  const base = (() => {
+    let title = song.title.trim(), previous;
+    do {
+      previous = title;
+      title = title.replace(/\s*(?:\([^()]*\)|\[[^\[\]]*\])\s*$/, '').trim();
+    } while (title && title !== previous);
+    return title || song.title;
+  })();
 
-  // Decoys should feel like credible alternatives, not five random titles.
-  // Prefer the same release/artist and the same kind of cut, then titles with
-  // a similar word count and length. A tiny seeded jitter varies close ties.
-  const candidates = pool().filter((i) => i !== idx).map((i) => {
-    const candidate = SONGS[i], key = norm(candidate.title);
-    const candidateWords = key.split(' ').length;
-    const sharedArtist = norm(candidate.artist).split(' ')
-      .some((w) => w.length > 2 && artistWords.has(w));
-    let score = 0;
-    if (candidate.album && candidate.album === song.album) score += 120;
-    if (norm(candidate.artist) === norm(song.artist)) score += 90;
-    else if (sharedArtist) score += 55;
-    if (LOFI_RE.test(candidate.title) === LOFI_RE.test(song.title)) score += 25;
-    score += Math.max(0, 24 - Math.abs(candidateWords - titleWords) * 8);
-    score += Math.max(0, 18 - Math.abs(key.length - answer.length));
-    return { i, key, score: score + r() * 4 };
-  }).sort((a, b) => b.score - a.score);
+  const live = /\blive\b/i.test(song.title);
+  const lofi = /\blo-?fi\b/i.test(song.title);
+  const instrumental = /\binstrumental\b/i.test(song.title);
+  const suffixes = live ? [
+    'Live', 'Live at the Hollywood Bowl', 'Live with the Icelandic Orchestra',
+    'Live at the Royal Albert Hall', 'Live at the Symphony', 'Live in Los Angeles',
+    'Live Acoustic', 'Live from Reykjavík',
+  ] : lofi ? [
+    'Lofi Version', 'Lo-Fi Mix', 'Lofi Rework', 'Bedroom Lofi Version',
+    'Slowed Lofi Version', 'Late Night Lofi Mix', 'Lofi Instrumental',
+  ] : instrumental ? [
+    'Instrumental', 'Orchestral Instrumental', 'Piano Instrumental',
+    'Acoustic Instrumental', 'Studio Instrumental', 'Instrumental Rework',
+  ] : [
+    'Acoustic Version', 'Live', 'Studio Version', 'Orchestral Version',
+    'Stripped Version', 'Demo', 'Rework', 'Live at the Hollywood Bowl',
+  ];
 
-  const choices = [idx, ...candidates.filter(({ key }) => {
-    if (seen.has(key)) return false;
+  const catalogue = new Set(SONGS.map((s) => norm(s.title)));
+  const seen = new Set([norm(song.title)]);
+  const fakeTitles = suffixes.map((suffix) => `${base} (${suffix})`).filter((title) => {
+    const key = norm(title);
+    if (seen.has(key) || catalogue.has(key)) return false;
     seen.add(key); return true;
-  }).slice(0, 5).map(({ i }) => i)];
+  });
+  for (let n = 1; fakeTitles.length < 5; n++) {
+    const title = `${base} (Alternate ${n === 1 ? 'Version' : 'Take ' + n})`;
+    const key = norm(title);
+    if (!seen.has(key) && !catalogue.has(key)) { seen.add(key); fakeTitles.push(title); }
+  }
+
+  const choices = [
+    { title: song.title, correct: true },
+    ...fakeTitles.slice(0, 5).map((title) => ({ title, correct: false })),
+  ];
 
   // Fisher-Yates with the integer PRNG keeps solo choices stable. In 1v1 the
   // host sends this finished order, so the guest never recomputes it.
@@ -383,13 +401,14 @@ function render() {
       : 'Skip (+' + Math.round((steps[stage() + 1] - lim) * 10) / 10 + 's)';
 
   showHint();
-  // No hint in 1v1 (see revealHint) or Insane — Insane is "no help at all" by
-  // design, and a hint that spells out a word doesn't sit well next to having
-  // to type the rest of the title yourself with no suggestions.
+  // No hint in 1v1 (see revealHint) or Insane — Insane's six near-identical
+  // version choices are the only help it gives.
   el.hintbar.hidden = mode === 'versus' || mode === 'insane';
   el.nextBtn.style.display = mode === 'daily' || mode === 'versus' ? 'none' : '';
   el.shareBtn.style.display = mode === 'versus' ? 'none' : '';
   el.reportRow.style.display = mode === 'versus' ? 'none' : '';
+  el.searchbox.hidden = insaneRules();
+  el.submitBtn.hidden = insaneRules();
   renderChoices();
 }
 
@@ -398,9 +417,9 @@ function renderChoices() {
   el.choices.hidden = !show;
   if (!show) { el.choices.innerHTML = ''; return; }
   const guessed = new Set(S.rows.filter((r) => r.kind === 'wrong').map((r) => norm(r.text)));
-  el.choices.innerHTML = '<div class="choices-label">Which song is it?</div><div class="choice-list">' +
-    S.choices.map((i) => '<button class="choice" data-choice="' + i + '"' +
-      (guessed.has(norm(SONGS[i].title)) ? ' disabled' : '') + '>' + escapeHtml(SONGS[i].title) + '</button>').join('') +
+  el.choices.innerHTML = '<div class="choice-list">' +
+    S.choices.map((choice, n) => '<button class="choice" data-choice="' + n + '"' +
+      (guessed.has(norm(choice.title)) ? ' disabled' : '') + '>' + escapeHtml(choice.title) + '</button>').join('') +
     '</div>';
 }
 
@@ -446,9 +465,8 @@ function rebuildTitles() {
   }));
 }
 
-/* True for solo Insane, and equally true for an Insane 1v1 match — `mode`
-   stays 'versus' for the whole match, so the no-suggestions rule has to
-   check the match's own difficulty rather than the mode alone. */
+/* True for solo Insane and for an Insane 1v1 match. `mode` stays 'versus'
+   during a match, so Insane-only UI and penalties must check its difficulty. */
 const insaneRules = () => mode === 'insane' || (mode === 'versus' && !!match?.insane);
 
 function updateAC() {
@@ -838,7 +856,7 @@ function startVersusRound(n) {
   beginRound(match.songs[n], null, match.insane ? INSANE_CFG : NORMAL_CFG, match.choices[n]);
   drawScoreboard();
   startClock();
-  el.guess.focus();
+  if (!match.insane) el.guess.focus();
 }
 
 function startClock() {
@@ -1076,9 +1094,9 @@ el.ac.addEventListener('mousedown', (e) => {
 el.choices.addEventListener('click', (e) => {
   const b = e.target.closest('[data-choice]');
   if (!b || b.disabled || !S || S.done) return;
-  const i = Number(b.dataset.choice);
-  chosen = titles.find((t) => t.i === i) ?? null;
-  if (!chosen) return;
+  const choice = S.choices[Number(b.dataset.choice)];
+  if (!choice) return;
+  chosen = { i: choice.correct ? S.idx : -1, title: choice.title };
   el.guess.value = chosen.title;
   submit();
 });

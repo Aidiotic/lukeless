@@ -203,10 +203,6 @@ input[type=text]::placeholder { color: var(--faint); }
 .ac div.sel, .ac div:hover { background: var(--wash); }
 
 .choices { margin-top: 10px; }
-.choices-label {
-  color: var(--muted); font-size: 10px; letter-spacing: .06em;
-  text-transform: uppercase; margin-bottom: 6px;
-}
 .choice-list { display: flex; flex-wrap: wrap; gap: 6px; }
 .choice {
   border: 1px solid var(--rule); background: var(--wash); color: var(--muted);
