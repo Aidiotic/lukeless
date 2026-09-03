@@ -10,7 +10,7 @@ window.LUKELESS_CONFIG = {
   // The page itself is static GitHub Pages. This flag stands in for restarting
   // that client: flip it here and push (or run ./restart.sh), and every open
   // tab notices within about ten seconds and reloads onto the notice below.
-  maintenance: true,
+  maintenance: false,
   maintenanceNotice: "Fixing the AsapSCIENCE round-five guarantee. Back shortly.",
 
   // Durable Object WebSocket relay. Keeping this outside the bundle makes it
