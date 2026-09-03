@@ -27,6 +27,16 @@ SITE="https://aidiotic.github.io/lukeless"
 REASON="${*:-lukeless is down for a quick update. Back in a few minutes.}"
 GIT_AUTHOR=(-c user.name="Aidiotic" -c user.email="jidiot72@gmail.com")
 
+# GitHub Pages gives static files a ten-minute cache lifetime. If app.js from
+# one release meets versus.js or songs.js from another, a room code can look
+# broken even though the PeerJS room exists. Stamp every local asset URL with
+# the feature commit that is being published so a browser fetches one coherent
+# release. The stamp lands in the maintenance-down commit before Pages builds.
+release=$(git rev-parse --short HEAD)
+LUKELESS_RELEASE="$release" perl -pi -e \
+  's{\?v=[A-Za-z0-9._-]+}{"?v=" . $ENV{LUKELESS_RELEASE}}ge' \
+  index.html src/app.js
+
 # repos/$REPO/pages/builds/latest can report the *previous* commit's "built"
 # status for a few seconds after a push, before GitHub has even started a new
 # build for it — checking status alone once cost a real down-and-up cycle its
@@ -63,7 +73,7 @@ verify_live() {
 }
 
 push_config() {
-  git add config.js
+  git add config.js index.html src/app.js
   git "${GIT_AUTHOR[@]}" commit -q -m "$1"
   git push -q origin main
   git rev-parse HEAD
