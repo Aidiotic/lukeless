@@ -41,7 +41,7 @@ const ALL_PACKS = PACKS.length > 1
 
 /* Both players must be holding the same songs.js for a shared index to mean
    the same song on both screens. Cheap fingerprint, checked at handshake. */
-const BUILD = '3.' + SONGS.length + '.' + SONGS.reduce((h, s) => (h * 31 + s.title.length) % 99991, 7);
+const BUILD = '4.' + SONGS.length + '.' + SONGS.reduce((h, s) => (h * 31 + s.title.length) % 99991, 7);
 
 /* Everything by default when there is more than one playlist to combine —
    opening on one person's list buries the rest of the songs behind a control
@@ -327,12 +327,12 @@ function buildChoices(idx) {
   }
 
   const choices = [
-    { title: song.title, correct: true },
-    ...fakeTitles.slice(0, 5).map((title) => ({ title, correct: false })),
+    { i: idx, title: song.title, artist: song.artist, key: norm(song.title) },
+    ...fakeTitles.slice(0, 5).map((title) => ({ i: -1, title, artist: song.artist, key: norm(title) })),
   ];
 
-  // Fisher-Yates with the integer PRNG keeps solo choices stable. In 1v1 the
-  // host sends this finished order, so the guest never recomputes it.
+  // Fisher-Yates with the integer PRNG keeps the expanded search result stable
+  // while the player edits the query, and identical for both 1v1 players.
   const orderRng = rng(hashCode(BUILD + '|choice-order|' + idx));
   for (let i = choices.length - 1; i > 0; i--) {
     const j = Math.floor(orderRng() * (i + 1));
@@ -341,10 +341,9 @@ function buildChoices(idx) {
   return choices;
 }
 
-function beginRound(idx, restore, cfg = NORMAL_CFG, choices = null) {
+function beginRound(idx, restore, cfg = NORMAL_CFG) {
   S = {
     idx, rows: [], done: false, won: false, hint: false, cfg, step: 0,
-    choices: cfg === INSANE_CFG ? (choices ?? buildChoices(idx)) : [],
   };
   if (restore) {
     Object.assign(S, restore, { idx, cfg });
@@ -401,26 +400,14 @@ function render() {
       : 'Skip (+' + Math.round((steps[stage() + 1] - lim) * 10) / 10 + 's)';
 
   showHint();
-  // No hint in 1v1 (see revealHint) or Insane — Insane's six near-identical
-  // version choices are the only help it gives.
+  // No hint in 1v1 (see revealHint) or Insane — Insane uses the ambiguous
+  // six-version search results instead.
   el.hintbar.hidden = mode === 'versus' || mode === 'insane';
   el.nextBtn.style.display = mode === 'daily' || mode === 'versus' ? 'none' : '';
   el.shareBtn.style.display = mode === 'versus' ? 'none' : '';
   el.reportRow.style.display = mode === 'versus' ? 'none' : '';
-  el.searchbox.hidden = insaneRules();
-  el.submitBtn.hidden = insaneRules();
-  renderChoices();
-}
-
-function renderChoices() {
-  const show = insaneRules() && S && !S.done;
-  el.choices.hidden = !show;
-  if (!show) { el.choices.innerHTML = ''; return; }
-  const guessed = new Set(S.rows.filter((r) => r.kind === 'wrong').map((r) => norm(r.text)));
-  el.choices.innerHTML = '<div class="choice-list">' +
-    S.choices.map((choice, n) => '<button class="choice" data-choice="' + n + '"' +
-      (guessed.has(norm(choice.title)) ? ' disabled' : '') + '>' + escapeHtml(choice.title) + '</button>').join('') +
-    '</div>';
+  el.searchbox.hidden = false;
+  el.submitBtn.hidden = false;
 }
 
 function showHint() {
@@ -460,6 +447,7 @@ function rebuildTitles() {
   titles = pool().map((i) => ({
     i,
     title: SONGS[i].title,
+    artist: SONGS[i].artist,
     key: norm(SONGS[i].title),
     searchKey: norm(SONGS[i].title + ' ' + SONGS[i].artist),
   }));
@@ -476,23 +464,23 @@ function updateAC() {
 
   const guessed = new Set(S.rows.filter((r) => r.kind !== 'skip').map((r) => norm(r.text)));
 
-  acList = titles.filter((t) => t.searchKey.includes(q) && !guessed.has(t.key))
-    .sort((a, b) => {
-      // If Insane's exact answer shares its title with another catalogue row,
-      // keep the real song first so typing the right title cannot score wrong.
-      if (insaneRules() && q === norm(SONGS[S.idx].title)) {
-        if (a.i === S.idx) return -1;
-        if (b.i === S.idx) return 1;
-      }
-      return a.searchKey.indexOf(q) - b.searchKey.indexOf(q) || a.key.localeCompare(b.key);
-    })
-    .slice(0, 40);
+  if (insaneRules()) {
+    const matches = titles.filter((t) => t.searchKey.includes(q) && !guessed.has(t.key))
+      .sort((a, b) => a.searchKey.indexOf(q) - b.searchKey.indexOf(q) || a.key.localeCompare(b.key));
+    const target = titles.find((t) => t.i === S.idx);
+    const anchor = target?.searchKey.includes(q) && !guessed.has(target.key) ? target : matches[0];
+    acList = anchor ? buildChoices(anchor.i).filter((t) => !guessed.has(t.key)) : [];
+  } else {
+    acList = titles.filter((t) => t.searchKey.includes(q) && !guessed.has(t.key))
+      .sort((a, b) => a.searchKey.indexOf(q) - b.searchKey.indexOf(q) || a.key.localeCompare(b.key))
+      .slice(0, 40);
+  }
 
   if (!acList.length) { el.ac.classList.remove('show'); return; }
   acSel = 0;
   el.ac.innerHTML = acList.map((t, n) =>
     '<div data-n="' + n + '"' + (n === acSel ? ' class="sel"' : '') + '>' + escapeHtml(t.title) +
-    '<small>' + escapeHtml(SONGS[t.i].artist) + '</small></div>').join('');
+    '<small>' + escapeHtml(t.artist) + '</small></div>').join('');
   el.ac.classList.add('show');
   el.submitBtn.disabled = false;
 }
@@ -684,7 +672,7 @@ function newMatch(isHost, code) {
   return {
     link: null, isHost, code,
     them: 'Opponent',
-    round: -1, songs: [], choices: [],
+    round: -1, songs: [],
     mine: [], theirs: [],           // per-round { pts, secs, won, tries }
     live: null,                     // opponent's progress this round
     phase: 'lobby',
@@ -780,9 +768,8 @@ function onVersusMessage(msg) {
       if (match.isHost) {
         match.insane = vsInsane;
         match.songs = drawSongs(match.insane);
-        match.choices = match.insane ? match.songs.map(buildChoices) : [];
         match.link.send({
-          t: 'setup', songs: match.songs, choices: match.choices,
+          t: 'setup', songs: match.songs,
           pack: packId, insane: match.insane, rounds: match.songs.length,
         });
         startVersusRound(0);
@@ -796,7 +783,6 @@ function onVersusMessage(msg) {
       if (msg.pack && ALL_PACKS.some((p) => p.id === msg.pack)) { packId = msg.pack; syncPacks(); }
       match.insane = !!msg.insane;
       match.songs = msg.songs ?? [];
-      match.choices = Array.isArray(msg.choices) ? msg.choices : [];
       break;
     }
 
@@ -853,10 +839,10 @@ function startVersusRound(n) {
   el.roundLabel.textContent = 'Round ' + (n + 1) + ' of ' + match.songs.length + (match.insane ? ' · Insane' : '');
   el.guess.placeholder = 'Search by title or artist…';
 
-  beginRound(match.songs[n], null, match.insane ? INSANE_CFG : NORMAL_CFG, match.choices[n]);
+  beginRound(match.songs[n], null, match.insane ? INSANE_CFG : NORMAL_CFG);
   drawScoreboard();
   startClock();
-  if (!match.insane) el.guess.focus();
+  el.guess.focus();
 }
 
 function startClock() {
@@ -1090,15 +1076,6 @@ el.guess.addEventListener('keydown', (e) => {
 el.ac.addEventListener('mousedown', (e) => {
   const d = e.target.closest('[data-n]');
   if (d) { e.preventDefault(); pick(+d.dataset.n); }
-});
-el.choices.addEventListener('click', (e) => {
-  const b = e.target.closest('[data-choice]');
-  if (!b || b.disabled || !S || S.done) return;
-  const choice = S.choices[Number(b.dataset.choice)];
-  if (!choice) return;
-  chosen = { i: choice.correct ? S.idx : -1, title: choice.title };
-  el.guess.value = chosen.title;
-  submit();
 });
 document.addEventListener('click', (e) => {
   if (!e.target.closest('.searchbox')) el.ac.classList.remove('show');
