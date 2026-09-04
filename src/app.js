@@ -685,6 +685,7 @@ function newMatch(isHost, code) {
     live: null,                     // opponent's progress this round
     phase: 'lobby',
     readyMe: false, readyThem: false,
+    theyAway: false,                // opponent has the tab in the background
     sentDone: false,
     insane: false,                  // authoritative once 'setup' is sent (host) or received (guest)
   };
@@ -848,6 +849,9 @@ function cleanPeer(msg) {
     case 'ready':
       return { t, round: Math.trunc(clamp(msg.round, 0, roundCeiling())) };
 
+    case 'away':
+      return { t, away: !!msg.away };
+
     case 'over':
     case 'bye':
       return { t };
@@ -950,6 +954,11 @@ function onVersusMessage(raw) {
       showMatchResult();
       break;
 
+    case 'away':
+      match.theyAway = msg.away;
+      drawScoreboard();
+      break;
+
     case 'bye':
       endMatch('Opponent left.');
       break;
@@ -970,6 +979,7 @@ function startVersusRound(n, idx) {
   match.round = n;
   match.live = null;
   match.readyMe = match.readyThem = false;
+  match.theyAway = false;
   match.sentDone = false;
   match.phase = 'playing';
 
@@ -1119,7 +1129,8 @@ function drawScoreboard() {
     : S && !S.done ? (S.cfg.steps.length - S.rows.length) + ' tries left' : ' ';
 
   const tr = match.theirs[match.round];
-  el.themSub.textContent = tr
+  if (match.theyAway && !tr) { el.themSub.textContent = 'away — tab in the background'; }
+  else el.themSub.textContent = tr
     ? (tr.won ? 'solved at ' + tr.secs + 's · +' + tr.pts + (tr.hint ? ' ·*' : '') : 'missed') +
       (match.readyThem ? ' · ready' : '')
     : match.live ? 'on try ' + (match.live.marks.length + 1) : 'still listening';
@@ -1266,6 +1277,45 @@ el.nextBtn.addEventListener('click', () => {
   if (mode !== 'versus') return;
   if (match?.phase === 'matchOver') { endMatch(); return; }
   readyUp();
+});
+
+// ── attention ──────────────────────────────────────────────────────────────
+
+/* Leaving the tab mid-round is how you look a song up, so it costs you.
+ *
+ * Three things happen, in order of how much they matter. The clip stops the
+ * moment you go, so there is nothing to listen to while you are away. The
+ * clock deliberately keeps running, so the time is spent whether you are
+ * here or not. And the opponent is told — which does more work than either,
+ * because this is a game between two people who can see each other.
+ *
+ * Only after eight unbroken seconds does the round go, and only that round.
+ * A hard kick was the ask and it is the wrong severity: visibilitychange
+ * fires for a notification, a lock screen, an incoming call. Ending a
+ * twenty-four round match because a phone buzzed would break far more real
+ * games than it would ever catch someone cheating. */
+const AWAY_GRACE_MS = 8000;
+let awayTimer = null;
+
+document.addEventListener('visibilitychange', () => {
+  if (mode !== 'versus' || !match || match.phase !== 'playing') return;
+
+  if (!document.hidden) {
+    clearTimeout(awayTimer);
+    match.link?.send({ t: 'away', away: false });
+    return;
+  }
+
+  stopClip();
+  match.link?.send({ t: 'away', away: true });
+  clearTimeout(awayTimer);
+  awayTimer = setTimeout(() => {
+    if (!document.hidden || !match || match.phase !== 'playing' || !S || S.done) return;
+    while (S.rows.length < S.cfg.steps.length) S.rows.push({ kind: 'skip', text: 'Skipped' });
+    stopClip();
+    finish(false);
+    toast('Round forfeited — you left the tab.');
+  }, AWAY_GRACE_MS);
 });
 
 // ── autoclicker guard ──────────────────────────────────────────────────────
