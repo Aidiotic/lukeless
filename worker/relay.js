@@ -42,28 +42,38 @@ export class MatchRoom extends DurableObject {
     if (role !== 'host' && role !== 'guest') return new Response('Invalid role', { status: 400 });
     if (!/^[0-9a-f-]{36}$/i.test(token ?? '')) return new Response('Invalid token', { status: 400 });
 
-    /* The offered subprotocols are "lukeless-v1" and the invite key. The room
-       code only names the room; this is what proves the caller was invited. */
-    const offered = (request.headers.get('Sec-WebSocket-Protocol') ?? '')
-      .split(',').map((s) => s.trim());
-    const key = offered[1] ?? '';
-    if (!/^[A-Z2-7]{26}$/.test(key)) return this.#rejectedSocket('no-match');
+    /* Invite keys are off by default: joining is back to the room code alone,
+       which is the sharing model the game is actually played with — someone
+       reads five characters out loud. `wrangler deploy --var REQUIRE_KEY:on`
+       turns the check back on, and the client already sends the key either
+       way, so nothing else has to change to flip it.
+     *
+     * With it off, a code is the whole credential: anyone who overhears one
+     * can take the free seat. That is a griefing risk, not a foothold — the
+     * message validation and role guards in app.js are what stop a peer from
+     * doing anything worse than playing badly. */
+    if (this.env.REQUIRE_KEY) {
+      const offered = (request.headers.get('Sec-WebSocket-Protocol') ?? '')
+        .split(',').map((s) => s.trim());
+      const key = offered[1] ?? '';
+      if (!/^[A-Z2-7]{26}$/.test(key)) return this.#rejectedSocket('no-match');
 
-    if (await this.ctx.storage.get('sealed')) return this.#rejectedSocket('no-match');
+      if (await this.ctx.storage.get('sealed')) return this.#rejectedSocket('no-match');
 
-    const keyHash = await sha256(key);
-    const known = await this.ctx.storage.get('keyHash');
-    if (known === undefined) {
-      // First caller in defines the room. Only a host may do that.
-      if (role !== 'host') return this.#rejectedSocket('no-match');
-      await this.ctx.storage.put('keyHash', keyHash);
-    } else if (!sameSecret(known, keyHash)) {
-      /* Deliberately the same answer as a room that does not exist, so this
-         cannot be used to discover which codes are live. */
-      const bad = ((await this.ctx.storage.get('badKeys')) ?? 0) + 1;
-      await this.ctx.storage.put('badKeys', bad);
-      if (bad >= MAX_BAD_KEYS) await this.ctx.storage.put('sealed', true);
-      return this.#rejectedSocket('no-match');
+      const keyHash = await sha256(key);
+      const known = await this.ctx.storage.get('keyHash');
+      if (known === undefined) {
+        // First caller in defines the room. Only a host may do that.
+        if (role !== 'host') return this.#rejectedSocket('no-match');
+        await this.ctx.storage.put('keyHash', keyHash);
+      } else if (!sameSecret(known, keyHash)) {
+        /* Deliberately the same answer as a room that does not exist, so this
+           cannot be used to discover which codes are live. */
+        const bad = ((await this.ctx.storage.get('badKeys')) ?? 0) + 1;
+        await this.ctx.storage.put('badKeys', bad);
+        if (bad >= MAX_BAD_KEYS) await this.ctx.storage.put('sealed', true);
+        return this.#rejectedSocket('no-match');
+      }
     }
 
     const sockets = this.ctx.getWebSockets();

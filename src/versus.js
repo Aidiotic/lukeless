@@ -110,7 +110,7 @@ export class Versus {
        this value is the thing that actually gates the room. */
     const socket = new WebSocket(
       `${base}/room/${encodeURIComponent(this.code)}?${query}`,
-      ['lukeless-v1', this.key],
+      this.key ? ['lukeless-v1', this.key] : ['lukeless-v1'],
     );
     this.socket = socket;
 

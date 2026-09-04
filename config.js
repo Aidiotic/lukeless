@@ -9,7 +9,7 @@ window.LUKELESS_CONFIG = {
   /* Limited mode. The site is up and solo play is untouched; 1v1 is narrowed
      to invite links carrying a key, so a match code on its own cannot get
      anyone in. Flip this off here when the restriction is lifted. */
-  limited: true,
+  limited: false,
   limitedNotice: "Limited mode — 1v1 is invite-link only. Sending someone the code on its own will not let them in.",
 
   // ── maintenance ──

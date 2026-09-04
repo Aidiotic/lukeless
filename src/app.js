@@ -746,10 +746,6 @@ async function joinMatch() {
   const { code, key: pasted } = readInvite(el.joinCode.value);
   const key = pasted || inviteKey;
   if (code.length < 5) { connLine('That code is too short.', true); return; }
-  if (!key) {
-    connLine('Paste the whole invite link — a code on its own cannot join a match.', true);
-    return;
-  }
 
   match = newMatch(false, code);
   match.key = key;
@@ -1231,7 +1227,7 @@ el.joinCode.addEventListener('input', () => {
   // it down to five characters would throw the key away.
   if (!/[?&]vs=/.test(el.joinCode.value)) el.joinCode.value = normaliseCode(el.joinCode.value);
   const { code, key } = readInvite(el.joinCode.value);
-  el.joinBtn.disabled = code.length < 5 || !(key || inviteKey);
+  el.joinBtn.disabled = code.length < 5;
 });
 el.joinCode.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !el.joinBtn.disabled) joinMatch(); });
 el.cancelBtn.addEventListener('click', () => {
@@ -1400,7 +1396,7 @@ if (maint.release && maint.release !== ASSET_RELEASE) {
   if (invite.length === 5) {
     setMode('versus');
     el.joinCode.value = invite;
-    el.joinBtn.disabled = !inviteKey;
+    el.joinBtn.disabled = false;
     connLine('Ready to join match ' + invite + '.');
   } else {
     setMode('daily');
