@@ -4,7 +4,7 @@
 window.LUKELESS_CONFIG = {
   // Updated by restart.sh. app.js fetches this file without cache and moves
   // stale pages onto a release-specific URL before allowing a 1v1 handshake.
-  release: '4c2d1fa',
+  release: '8f7b752',
 
   /* Limited mode. The site is up and solo play is untouched; 1v1 is narrowed
      to invite links carrying a key, so a match code on its own cannot get
