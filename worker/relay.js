@@ -122,8 +122,25 @@ export class MatchRoom extends DurableObject {
     });
   }
 
+  /* Normal play sends a handful of messages a round. An autoclicker sends as
+     many as the browser will emit, and every one of them was forwarded to the
+     other player. Held in memory rather than storage: if the object is
+     evicted the counter resets, which is fine — this is throttling a stuck
+     button, not defending against a determined flood. */
+  #rate = new Map();
+
+  #tooChatty(socket) {
+    const now = Date.now();
+    const seen = this.#rate.get(socket) ?? { since: now, count: 0 };
+    if (now - seen.since > 1000) { seen.since = now; seen.count = 0; }
+    seen.count++;
+    this.#rate.set(socket, seen);
+    return seen.count > 25;
+  }
+
   async webSocketMessage(socket, message) {
     if (typeof message !== 'string' || message.length > 64_000) return;
+    if (this.#tooChatty(socket)) return;
     try {
       const parsed = JSON.parse(message);
       if (parsed?.__relay === 'ping') {

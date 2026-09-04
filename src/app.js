@@ -20,16 +20,17 @@ const ASSET_RELEASE = new URL(import.meta.url).searchParams.get('v') ?? 'dev';
 
 const NORMAL_CFG = { steps: [1, 2, 4, 7, 11, 16], points: [100, 80, 60, 45, 30, 20] };
 
-/* Insane: 0.1s is not a typo. Five steps instead of six, and every step is
-   worth more than the equivalent normal-mode step, because getting anything
-   right off a tenth of a second is a different sport. */
-const INSANE_CFG = { steps: [0.1, 0.5, 0.7, 1, 1.5], points: [200, 150, 110, 80, 50] };
+/* Insane: 0.05s is not a typo. Five steps instead of six, the whole ladder
+   now topping out where normal mode's second guess starts, and every step
+   worth more than the equivalent normal-mode step — getting anything right
+   off a twentieth of a second is a different sport. */
+const INSANE_CFG = { steps: [0.05, 0.15, 0.35, 0.6, 1], points: [300, 220, 160, 105, 65] };
 
 const HINT_COST = 25;
 const EPOCH = Date.UTC(2026, 0, 1);
 
-const NORMAL_VS_ROUNDS = 6;
-const INSANE_VS_ROUNDS = 14;
+const NORMAL_VS_ROUNDS = 24;
+const INSANE_VS_ROUNDS = 32;
 const VS_CLOCK = 90;   // seconds a round is allowed to run before it forfeits
 
 const $ = (id) => document.getElementById(id);
@@ -190,11 +191,11 @@ const hashCode = (s) => [...s].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 999
 
 /* Laufey is weighted up within whatever pool is playing. She is 97 of the 623
    songs, which on a straight draw would put her on screen about one round in
-   six; 2.5x brings that closer to one in three without crowding out
-   everything else the way an early 5x cut did. Matched on the artist field,
-   so features and collaborations count. */
+   six. 2.5x pulled that to roughly one in three, which was too much of the
+   same voice across a long match; 1.4x keeps a nudge without the crowding.
+   Matched on the artist field, so features and collaborations count. */
 const LAUFEY = /(^|[^a-z])laufey([^a-z]|$)/i;
-const LAUFEY_WEIGHT = 2.5;
+const LAUFEY_WEIGHT = 1.4;
 const rawWeight = (i) => (LAUFEY.test(SONGS[i].artist) ? LAUFEY_WEIGHT : 1);
 
 /* Luke's playlist and "mine" sit at 184 and 455 songs, so on Everything a flat
@@ -274,13 +275,14 @@ function pickEndlessSong() {
   return weightedOrder(pool(), Math.random)[0];
 }
 
-/* Insane draws mostly from tagged Lofi versions when the current pack has
-   any — matched on title, since a lofi cut is its own catalogue entry, not a
+/* Insane leans towards tagged Lofi versions when the current pack has
+   any, but only sometimes: at 0.95 the four that exist were used up in the
+   opening rounds of every match and the rest played out identically — matched on title, since a lofi cut is its own catalogue entry, not a
    variant of the normal one. Only 4 exist today (all Laufey, all in "My
    library"), so on Luke's playlist or with a fresh catalogue this always
    falls back to a normal draw. */
 const LOFI_RE = /\(lofi version\)/i;
-const LOFI_CHANCE = 0.95;
+const LOFI_CHANCE = 0.3;
 
 function pickInsaneSong() {
   if (Math.random() < LOFI_CHANCE) {
@@ -728,7 +730,16 @@ function readInvite(text) {
   };
 }
 
+/* The click guard stops a burst at the button, but Enter in the code box and
+   any future caller reach these directly, and one socket per click is the
+   thing that actually corrupts a room: the extra seats race each other and
+   the player who meant to join is told the code is already in use. One
+   attempt at a time, always. */
+let connecting = false;
+
 async function openMatch() {
+  if (match || connecting) return;
+  connecting = true;
   const code = makeCode();
   match = newMatch(true, code);
   match.key = makeKey();
@@ -739,14 +750,17 @@ async function openMatch() {
 
   match.link = new Versus({ on: versusHandlers() });
   try { await match.link.host(code, match.key); }
-  catch (e) { connLine(e.message, true); resetLobby(); }
+  catch (e) { match = null; connLine(e.message, true); resetLobby(); }
+  finally { connecting = false; }
 }
 
 async function joinMatch() {
+  if (match || connecting) return;
   const { code, key: pasted } = readInvite(el.joinCode.value);
   const key = pasted || inviteKey;
   if (code.length < 5) { connLine('That code is too short.', true); return; }
 
+  connecting = true;
   match = newMatch(false, code);
   match.key = key;
   el.lobbyPick.hidden = true;
@@ -756,7 +770,8 @@ async function joinMatch() {
 
   match.link = new Versus({ on: versusHandlers() });
   try { await match.link.join(code, key); }
-  catch (e) { connLine(e.message, true); resetLobby(); }
+  catch (e) { match = null; connLine(e.message, true); resetLobby(); }
+  finally { connecting = false; }
 }
 
 function versusHandlers() {
@@ -1219,6 +1234,71 @@ el.nextBtn.addEventListener('click', () => {
   if (match?.phase === 'matchOver') { endMatch(); return; }
   readyUp();
 });
+
+// ── autoclicker guard ──────────────────────────────────────────────────────
+
+/* An autoclicker on either side is enough to wreck a match. Join opens a
+   socket per click, so a burst leaves several half-connected seats and the
+   room answers "already in use" to the player who actually meant to join.
+   Guesses burn every try in a few milliseconds, and the round advances before
+   either person has seen the song.
+ *
+ * A machine-driven click differs from a person's in three ways, so all three
+ * are checked: a scripted .click() is not a trusted event at all; repeats
+ * arrive faster than a hand can move; and the gaps between them barely vary,
+ * where a person's scatter by tens of milliseconds. The last one is the real
+ * tell — six clicks whose intervals agree to within 12ms is not a hand.
+ *
+ * This runs in the capture phase so it can stop the click before the button's
+ * own handler sees it, and it deliberately says something rather than
+ * swallowing the click silently, so a fast-but-human player is not left
+ * wondering why the button stopped working. */
+
+const CLICK_MIN_MS = 120;
+const CLICK_HISTORY = 6;
+const CLICK_JITTER_MS = 12;
+
+const GUARDED_BUTTONS = new Set([
+  'openBtn', 'joinBtn', 'cancelBtn',
+  'submitBtn', 'skipBtn', 'hintBtn', 'nextBtn', 'playBtn',
+  'modeDaily', 'modeEndless', 'modeInsane', 'modeVersus',
+]);
+
+const clickLog = new Map();
+let lastNag = 0;
+
+function humanClick(event, id) {
+  if (event?.isTrusted === false) return false;   // a scripted .click()
+
+  const now = performance.now();
+  const times = clickLog.get(id) ?? [];
+  const last = times[times.length - 1];
+  if (last !== undefined && now - last < CLICK_MIN_MS) return false;
+
+  times.push(now);
+  if (times.length > CLICK_HISTORY) times.shift();
+  clickLog.set(id, times);
+
+  if (times.length === CLICK_HISTORY) {
+    const gaps = times.slice(1).map((t, i) => t - times[i]);
+    const spread = Math.max(...gaps) - Math.min(...gaps);
+    if (spread < CLICK_JITTER_MS) { times.length = 0; return false; }
+  }
+  return true;
+}
+
+document.addEventListener('click', (event) => {
+  const button = event.target?.closest?.('button');
+  if (!button || !GUARDED_BUTTONS.has(button.id)) return;
+  if (humanClick(event, button.id)) return;
+
+  event.preventDefault();
+  event.stopImmediatePropagation();
+  if (performance.now() - lastNag > 2000) {
+    lastNag = performance.now();
+    toast('Easy — that is being clicked faster than the game accepts.');
+  }
+}, true);
 
 el.openBtn.addEventListener('click', openMatch);
 el.joinBtn.addEventListener('click', joinMatch);
