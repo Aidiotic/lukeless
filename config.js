@@ -16,8 +16,8 @@ window.LUKELESS_CONFIG = {
   // The page itself is static GitHub Pages. This flag stands in for restarting
   // that client: flip it here and push (or run ./restart.sh), and every open
   // tab notices within about ten seconds and reloads onto the notice below.
-  maintenance: false,
-  maintenanceNotice: "Adding an autoclicker guard to 1v1. Back in a few minutes.",
+  maintenance: true,
+  maintenanceNotice: "Hardening 1v1 against input spam. Back shortly.",
 
   // Durable Object WebSocket relay. Keeping this outside the bundle makes it
   // possible to move the relay without changing game code.
