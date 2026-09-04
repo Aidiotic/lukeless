@@ -1297,6 +1297,33 @@ el.nextBtn.addEventListener('click', () => {
 const AWAY_GRACE_MS = 8000;
 let awayTimer = null;
 
+/* Synthesised rather than a file. media-src only allows Apple's preview host,
+   so a local clip would be refused, and Web Audio loads nothing — no asset,
+   no policy change. It respects the mute button: if you asked the game for
+   silence you get silence, warning or not. */
+let toneCtx = null;
+
+function tone(notes) {
+  if (muted || !vol) return;
+  try {
+    toneCtx ??= new (window.AudioContext ?? window.webkitAudioContext)();
+    if (toneCtx.state === 'suspended') toneCtx.resume();
+    for (const [freq, at, len] of notes) {
+      const osc = toneCtx.createOscillator();
+      const gain = toneCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      const start = toneCtx.currentTime + at;
+      gain.gain.setValueAtTime(0.0001, start);
+      gain.gain.exponentialRampToValueAtTime(Math.min(0.22, vol * 0.28), start + 0.012);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + len);
+      osc.connect(gain).connect(toneCtx.destination);
+      osc.start(start);
+      osc.stop(start + len + 0.03);
+    }
+  } catch {}
+}
+
 document.addEventListener('visibilitychange', () => {
   if (mode !== 'versus' || !match || match.phase !== 'playing') return;
 
@@ -1307,6 +1334,7 @@ document.addEventListener('visibilitychange', () => {
   }
 
   stopClip();
+  tone([[880, 0, 0.12], [640, 0.16, 0.2]]);      // two falling notes: you are bleeding a round
   match.link?.send({ t: 'away', away: true });
   clearTimeout(awayTimer);
   awayTimer = setTimeout(() => {
@@ -1314,6 +1342,7 @@ document.addEventListener('visibilitychange', () => {
     while (S.rows.length < S.cfg.steps.length) S.rows.push({ kind: 'skip', text: 'Skipped' });
     stopClip();
     finish(false);
+    tone([[440, 0, 0.16], [300, 0.2, 0.34]]);    // lower and slower: it is gone
     toast('Round forfeited — you left the tab.');
   }, AWAY_GRACE_MS);
 });
