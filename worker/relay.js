@@ -58,9 +58,13 @@ export class MatchRoom extends DurableObject {
       const key = offered[1] ?? '';
       if (!/^[A-Z2-7]{26}$/.test(key)) return this.#rejectedSocket('no-match');
 
-      if (await this.ctx.storage.get('sealed')) return this.#rejectedSocket('no-match');
-
+      /* Hashed before the storage reads on purpose. Only storage awaits are
+         gated against other requests interleaving; crypto.subtle is not, so
+         awaiting it between the read and the write would open a window where
+         two racing hosts each see an undefined key and both write one. */
       const keyHash = await sha256(key);
+
+      if (await this.ctx.storage.get('sealed')) return this.#rejectedSocket('no-match');
       const known = await this.ctx.storage.get('keyHash');
       if (known === undefined) {
         // First caller in defines the room. Only a host may do that.
@@ -76,7 +80,16 @@ export class MatchRoom extends DurableObject {
       }
     }
 
-    const sockets = this.ctx.getWebSockets();
+    /* Rejected sockets are accepted and then immediately closed, and a close
+       is a handshake rather than something that happens at once — so for a
+       moment they are still in getWebSockets(). They hold no seat and must
+       not be counted as though they did: a guest arriving before the host is
+       ordinary here (the client says so itself and retries for six seconds),
+       and each of those rejections used to make the room look occupied. The
+       real host would then be told its own brand-new code was already in use.
+       A burst of joins made that near-certain. alarm() has always filtered
+       these out; admission simply never did. */
+    const sockets = this.ctx.getWebSockets().filter((s) => !s.deserializeAttachment()?.rejected);
     const roles = sockets.map((socket) => socket.deserializeAttachment()?.role);
     const sameRole = sockets.find((socket) => socket.deserializeAttachment()?.role === role);
     const savedToken = await this.ctx.storage.get(`${role}Token`);
@@ -109,13 +122,19 @@ export class MatchRoom extends DurableObject {
     });
   }
 
-  #rejectedSocket(reason) {
+  async #rejectedSocket(reason) {
     const pair = new WebSocketPair();
     const [client, server] = Object.values(pair);
     server.serializeAttachment({ rejected: true });
     this.ctx.acceptWebSocket(server);
     server.send(JSON.stringify({ __relay: reason }));
     server.close(1008, reason);
+
+    /* A refusal has to arm the sweep too. A room that only ever saw refused
+       connections — a scanner guessing keys at a code nobody claimed — wrote
+       badKeys and sealed and then had nothing to ever clean them up, so the
+       code stayed poisoned for whoever drew it next. */
+    await this.ctx.storage.setAlarm(Date.now() + GRACE_MS);
     return new Response(null, {
       status: 101, webSocket: client,
       headers: { 'Sec-WebSocket-Protocol': 'lukeless-v1' },

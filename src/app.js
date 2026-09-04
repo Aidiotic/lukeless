@@ -680,7 +680,7 @@ function newMatch(isHost, code) {
   return {
     link: null, isHost, code,
     them: 'Opponent',
-    round: -1, songs: [],
+    round: -1, songs: [], rounds: 0,
     mine: [], theirs: [],           // per-round { pts, secs, won, tries }
     live: null,                     // opponent's progress this round
     phase: 'lobby',
@@ -808,7 +808,7 @@ const clamp = (v, lo, hi) => (Number.isFinite(v) ? Math.min(hi, Math.max(lo, v))
    protocol's: round 13 is meaningless in a six-round match. Every consumer
    happens to compare against match.round first, so an over-range value is
    inert today — this keeps it inert if one of them ever stops comparing. */
-const roundCeiling = () => Math.max(0, (match?.songs?.length || INSANE_VS_ROUNDS) - 1);
+const roundCeiling = () => Math.max(0, (match?.rounds || INSANE_VS_ROUNDS) - 1);
 
 function cleanPeer(msg) {
   const t = String(msg.t ?? '');
@@ -819,9 +819,7 @@ function cleanPeer(msg) {
     case 'setup':
       return {
         t, pack: String(msg.pack ?? ''), insane: !!msg.insane,
-        songs: (Array.isArray(msg.songs) ? msg.songs : [])
-          .filter((i) => Number.isInteger(i) && i >= 0 && i < SONGS.length)
-          .slice(0, INSANE_VS_ROUNDS),
+        rounds: Math.trunc(clamp(msg.rounds, 0, INSANE_VS_ROUNDS)),
       };
 
     case 'progress':
@@ -829,12 +827,24 @@ function cleanPeer(msg) {
         t, round: Math.trunc(clamp(msg.round, 0, roundCeiling())),
         marks: (Array.isArray(msg.marks) ? msg.marks : [])
           .filter((k) => PIP_KINDS.has(k)).slice(0, INSANE_VS_ROUNDS),
-        done: !!msg.done, won: !!msg.won,
-        pts: clamp(msg.pts, 0, 100000), secs: clamp(msg.secs, 0, 3600),
+        done: !!msg.done, won: !!msg.won, hint: !!msg.hint,
+        /* Bounded by what this difficulty can actually pay out. A flat
+           ceiling left room for a claimed six-figure round against a real
+           best of 100 (Normal) or 300 (Insane), which is not a score so much
+           as a number. It cannot stop a peer reporting its own result — that
+           is the design — but it can keep the claim inside the game. */
+        pts: clamp(msg.pts, 0, Math.max(...(match?.insane ? INSANE_CFG : NORMAL_CFG).points)),
+        secs: clamp(msg.secs, 0, 3600),
         tries: Math.trunc(clamp(msg.tries, 0, INSANE_VS_ROUNDS)),
       };
 
     case 'start':
+      return {
+        t, round: Math.trunc(clamp(msg.round, 0, roundCeiling())),
+        // The one song this round is played on, checked against the catalogue.
+        idx: Number.isInteger(msg.idx) && msg.idx >= 0 && msg.idx < SONGS.length ? msg.idx : -1,
+      };
+
     case 'ready':
       return { t, round: Math.trunc(clamp(msg.round, 0, roundCeiling())) };
 
@@ -865,12 +875,16 @@ function onVersusMessage(raw) {
       if (match.isHost) {
         match.insane = vsInsane;
         match.songs = drawSongs(match.insane);
+        match.rounds = match.songs.length;
         match.link.send({
-          t: 'setup', songs: match.songs,
-          pack: packId, insane: match.insane, rounds: match.songs.length,
+          /* Deliberately not the song list. Sending every index up front let
+             the guest read the whole answer key at round one — no modified
+             client needed, just curiosity. Each round's index now travels in
+             its own `start`, revealed when it is actually played. */
+          t: 'setup', pack: packId, insane: match.insane, rounds: match.songs.length,
         });
         startVersusRound(0);
-        match.link.send({ t: 'start', round: 0 });
+        match.link.send({ t: 'start', round: 0, idx: match.songs[0] });
       }
       break;
     }
@@ -886,23 +900,27 @@ function onVersusMessage(raw) {
       // The guest plays the host's pack and difficulty, whatever it had picked.
       if (msg.pack && ALL_PACKS.some((p) => p.id === msg.pack)) { packId = msg.pack; syncPacks(); }
       match.insane = !!msg.insane;
-      match.songs = msg.songs;
+      match.rounds = msg.rounds;
       // Nothing survived validation, so there is no match to play. Saying so
       // beats sitting in the lobby waiting for a round that cannot start.
-      if (!match.songs.length) { connLine('The other player sent an unusable setup.', true); endMatch('Bad setup.'); }
+      if (!match.rounds) { connLine('The other player sent an unusable setup.', true); endMatch('Bad setup.'); }
       break;
     }
 
     case 'start':
       if (match.isHost) break;          // the host advances its own rounds, in maybeAdvance
-      startVersusRound(msg.round);
+      /* Only ever between rounds. Without this a host could send `start` on a
+         loop and restart the guest's round under them every time — new clip,
+         guesses wiped, clock reset, no way to ever finish one. */
+      if (match.phase !== 'lobby' && match.phase !== 'roundOver') break;
+      startVersusRound(msg.round, msg.idx);
       break;
 
     case 'progress':
       if (msg.round !== match.round) break;
       match.live = msg;
       if (msg.done) {
-        match.theirs[match.round] = { pts: msg.pts, secs: msg.secs, won: msg.won, tries: msg.tries };
+        match.theirs[match.round] = { pts: msg.pts, secs: msg.secs, won: msg.won, tries: msg.tries, hint: msg.hint };
         maybeEndRound();
       }
       drawScoreboard();
@@ -910,6 +928,12 @@ function onVersusMessage(raw) {
 
     case 'ready':
       if (msg.round !== match.round) break;
+      if (match.phase === 'matchOver') break;
+      /* "Ready" only means anything once they have actually finished the
+         round. Taking it on trust let a peer send it without ever sending
+         their result, and maybeEndRound then waited on a score that was
+         never coming — the round could not end for the honest player. */
+      if (!match.theirs[msg.round]) break;
       match.readyThem = true;
       // Only ever relabel this button in readyUp, i.e. when *this* player has
       // actually pressed it. Writing "waiting" here on the strength of the
@@ -922,6 +946,7 @@ function onVersusMessage(raw) {
 
     case 'over':
       if (match.isHost) break;          // likewise: only the host calls a match finished
+      if (match.phase === 'lobby' || match.phase === 'matchOver') break;
       showMatchResult();
       break;
 
@@ -931,12 +956,15 @@ function onVersusMessage(raw) {
   }
 }
 
-function startVersusRound(n) {
-  if (!match || !match.songs.length) return;
+function startVersusRound(n, idx) {
+  if (!match || !match.rounds) return;
   // The round number can come from the other browser. Clamping it to the
   // protocol's maximum is not enough — this match may be six rounds, not
   // fourteen — and `match.songs[n]` being undefined throws inside beginRound.
-  if (!Number.isInteger(n) || n < 0 || n >= match.songs.length) return;
+  if (!Number.isInteger(n) || n < 0 || n >= match.rounds) return;
+  // The host plays from its own list; the guest plays the index it was sent.
+  const song = match.isHost ? match.songs[n] : idx;
+  if (!Number.isInteger(song) || song < 0 || song >= SONGS.length) return;
   clearInterval(clockTimer);
 
   match.round = n;
@@ -949,10 +977,10 @@ function startVersusRound(n) {
   el.game.hidden = false;
   el.scoreboard.hidden = false;
   el.roundBar.hidden = false;
-  el.roundLabel.textContent = 'Round ' + (n + 1) + ' of ' + match.songs.length + (match.insane ? ' · Insane' : '');
+  el.roundLabel.textContent = 'Round ' + (n + 1) + ' of ' + match.rounds + (match.insane ? ' · Insane' : '');
   el.guess.placeholder = 'Search by title or artist…';
 
-  beginRound(match.songs[n], null, match.insane ? INSANE_CFG : NORMAL_CFG);
+  beginRound(song, null, match.insane ? INSANE_CFG : NORMAL_CFG);
   drawScoreboard();
   startClock();
   el.guess.focus();
@@ -1020,7 +1048,7 @@ function maybeEndRound() {
   showResult(verdict);
   drawScoreboard();
 
-  const last = match.round >= match.songs.length - 1;
+  const last = match.round >= match.rounds - 1;
   el.nextBtn.style.display = '';
   el.nextBtn.textContent = last ? 'See the result' : 'Next round';
   el.nextBtn.disabled = false;
@@ -1040,14 +1068,17 @@ function readyUp() {
 function maybeAdvance() {
   if (!match?.isHost || !match.readyMe || !match.readyThem) return;
   const next = match.round + 1;
-  if (next >= match.songs.length) { match.link.send({ t: 'over' }); showMatchResult(); return; }
-  match.link.send({ t: 'start', round: next });
+  if (next >= match.rounds) { match.link.send({ t: 'over' }); showMatchResult(); return; }
+  match.link.send({ t: 'start', round: next, idx: match.songs[next] });
   startVersusRound(next);
 }
 
 const total = (rounds) => rounds.reduce((a, r) => a + (r?.pts ?? 0), 0);
 
 function showMatchResult() {
+  /* Runs once per match. It writes to the saved 1v1 record, and re-entering
+     it was a way for a peer to inflate those counters silently. */
+  if (!match || match.phase === 'matchOver') return;
   match.phase = 'matchOver';
   clearInterval(clockTimer);
   const mine = total(match.mine), theirs = total(match.theirs);
@@ -1063,7 +1094,7 @@ function showMatchResult() {
     : 'A draw, ' + mine + ' each.';
   el.art.removeAttribute('src');
   el.rTitle.textContent = '';
-  el.rMeta.textContent = match.songs.length + ' rounds · ' + pack().name;
+  el.rMeta.textContent = match.rounds + ' rounds · ' + pack().name;
   el.fullAudio.pause(); el.fullAudio.removeAttribute('src');
   el.nextBtn.textContent = 'New match';
   el.nextBtn.disabled = false;
@@ -1089,7 +1120,7 @@ function drawScoreboard() {
 
   const tr = match.theirs[match.round];
   el.themSub.textContent = tr
-    ? (tr.won ? 'solved at ' + tr.secs + 's · +' + tr.pts : 'missed') +
+    ? (tr.won ? 'solved at ' + tr.secs + 's · +' + tr.pts + (tr.hint ? ' ·*' : '') : 'missed') +
       (match.readyThem ? ' · ready' : '')
     : match.live ? 'on try ' + (match.live.marks.length + 1) : 'still listening';
 
@@ -1186,6 +1217,7 @@ el.guess.addEventListener('input', updateAC);
 el.guess.addEventListener('focus', () => { if (el.guess.value) updateAC(); });
 
 el.guess.addEventListener('keydown', (e) => {
+  if (e.repeat) { e.preventDefault(); return; }   // holding Enter is an autoclicker too
   if (e.key === 'ArrowDown') { e.preventDefault(); acSel = Math.min(acSel + 1, acList.length - 1); markSel(); }
   else if (e.key === 'ArrowUp') { e.preventDefault(); acSel = Math.max(acSel - 1, 0); markSel(); }
   else if (e.key === 'Enter') {
@@ -1203,6 +1235,7 @@ document.addEventListener('click', (e) => {
   if (!e.target.closest('.searchbox')) el.ac.classList.remove('show');
 });
 document.addEventListener('keydown', (e) => {
+  if (e.repeat) return;
   if (e.code === 'Space' && e.target !== el.guess && e.target.tagName !== 'INPUT'
       && !document.querySelector('dialog[open]')) { e.preventDefault(); playClip(); }
 });
@@ -1287,10 +1320,29 @@ function humanClick(event, id) {
   return true;
 }
 
-document.addEventListener('click', (event) => {
-  const button = event.target?.closest?.('button');
-  if (!button || !GUARDED_BUTTONS.has(button.id)) return;
-  if (humanClick(event, button.id)) return;
+/* Not every control is a <button> with an id. Autocomplete rows are divs and
+   fire on mousedown, and the pack pills carry only a data attribute — both
+   submit or change state, and both were reachable at full machine speed
+   while the guard was only watching buttons. */
+function guardKey(target) {
+  if (!target) return null;
+  if (target.id && GUARDED_BUTTONS.has(target.id)) return target.id;
+  if (target.dataset?.pack !== undefined) return 'packPill';
+  if (target.dataset?.n !== undefined) return 'acRow';
+  return null;
+}
+
+const guardInput = (event) => {
+  const key = guardKey(event.target?.closest?.('button, [data-n], [data-pack]'));
+  if (!key) return;
+  /* One physical click fires mousedown and then click. Counting both would
+     read a single press as two activations 5ms apart and refuse the second —
+     which is the button appearing to be broken. Each control is judged on
+     the one event it actually acts on: autocomplete rows on mousedown,
+     everything else on click. */
+  const acts = key === 'acRow' ? 'mousedown' : 'click';
+  if (event.type !== acts) return;
+  if (humanClick(event, key)) return;
 
   event.preventDefault();
   event.stopImmediatePropagation();
@@ -1298,7 +1350,9 @@ document.addEventListener('click', (event) => {
     lastNag = performance.now();
     toast('Easy — that is being clicked faster than the game accepts.');
   }
-}, true);
+};
+document.addEventListener('click', guardInput, true);
+document.addEventListener('mousedown', guardInput, true);
 
 el.openBtn.addEventListener('click', openMatch);
 el.joinBtn.addEventListener('click', joinMatch);

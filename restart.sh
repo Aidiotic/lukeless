@@ -18,6 +18,21 @@
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")"
 
+# Any failure after the flag goes up must not leave the site dark. Publishing
+# waits on a real GitHub Pages build, and if that build or the CDN check times
+# out, `set -e` used to abort with maintenance already committed and pushed —
+# the site stayed down until someone noticed and fixed it by hand.
+restore_on_failure() {
+  local code=$?
+  [ "$code" -eq 0 ] && return 0
+  echo "  ! failed partway through — restoring the site before exiting" >&2
+  node scripts/set-maintenance.mjs false || true
+  git add config.js || true
+  git "${GIT_AUTHOR[@]}" commit -q -m "Restore the site after a failed restart" || true
+  git push -q origin main || true
+  echo "  the maintenance flag is off again; the publish may still be catching up" >&2
+}
+
 REPO="Aidiotic/lukeless"
 SITE="https://aidiotic.github.io/lukeless"
 REASON="${*:-lukeless is down for a quick update. Back in a few minutes.}"
@@ -78,6 +93,7 @@ push_config() {
   git rev-parse HEAD
 }
 
+trap restore_on_failure EXIT
 echo "== taking lukeless down =="
 node scripts/set-maintenance.mjs true "$REASON"
 sha=$(push_config "Maintenance: take the site down")
@@ -92,4 +108,5 @@ wait_for_publish "$sha"
 verify_live false
 
 echo
+trap - EXIT
 echo "done — lukeless is confirmed back up: $SITE/"
